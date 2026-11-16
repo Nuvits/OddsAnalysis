@@ -1,5 +1,6 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
+import { AbsoluteFill, Img, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
+import logo from './logo.jpg';
 import { loadFont as loadDisplay } from '@remotion/google-fonts/BarlowCondensed';
 import { loadFont as loadBody } from '@remotion/google-fonts/Inter';
 
@@ -41,7 +42,7 @@ const TEXT = {
     htftHow: 'Örnek: 0/1 = ilk yarı berabere, maçı ev sahibi kazandı',
     outro1: 'Sence skor', outro2: 'ne olur?', comment: 'Tahminini yorumlara yaz',
     disclaimer: 'Bahis tavsiyesi değildir. Geçmiş sonuçlar istatistiktir, kesinlik değildir. 18+',
-    source: 'Veri: football-data.co.uk · bwin oranları', draw: '0',
+    follow: 'Daha fazla analiz için takip etmeyi unutma', draw: '0',
   },
   en: {
     hook1: 'Same odds,', hook2: (n) => `${n} matches.`, hook3: 'How did they end?', watch: 'Watch till the end',
@@ -52,7 +53,7 @@ const TEXT = {
     htftHow: 'Example: X/1 = draw at half-time, home team won',
     outro1: 'What will', outro2: 'the score be?', comment: 'Drop your prediction below',
     disclaimer: 'Not betting advice. Past results are statistics, not certainties. 18+',
-    source: 'Data: football-data.co.uk · bwin odds', draw: 'X',
+    follow: "Don't forget to follow for more analysis", draw: 'X',
   },
 };
 
@@ -126,9 +127,16 @@ const ProgressBar = () => {
   );
 };
 
+// The logo is a round badge on a white square: scale it up inside a circle so the white corners are cut off.
+const Logo = ({ size }) => (
+  <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flex: 'none', boxShadow: '0 6px 20px rgba(0,0,0,0.4)' }}>
+    <Img src={logo} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.16)' }} />
+  </div>
+);
+
 const BrandTag = ({ brand }) => (
-  <div style={{ position: 'absolute', top: 236, left: 80, display: 'flex', alignItems: 'center', gap: 14, fontFamily: BODY, fontWeight: 700, fontSize: 30, color: COLOR.text, letterSpacing: 1 }}>
-    <svg width="44" height="44" viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill={COLOR.accent} /><path d="M8 21l5-6 4 3 6-8" stroke={COLOR.bg1} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  <div style={{ position: 'absolute', top: 232, left: 80, display: 'flex', alignItems: 'center', gap: 16, fontFamily: BODY, fontWeight: 700, fontSize: 32, color: COLOR.text, letterSpacing: 0.5 }}>
+    <Logo size={64} />
     <span>{brand.handle ? `@${brand.handle.replace(/^@/, '')}` : brand.name}</span>
   </div>
 );
@@ -338,10 +346,14 @@ const OutroScene = ({ p, t, len }) => {
         <div style={{ marginTop: 50, opacity: c }}><Pill>{t.comment}</Pill></div>
       </div>
       <div style={{ opacity: c, borderTop: `2px solid ${COLOR.cardLine}`, paddingTop: 36 }}>
-        <div style={{ fontSize: 46, fontWeight: 700 }}>{p.brand.name}</div>
-        {p.brand.site && <div style={{ fontSize: 38, color: COLOR.accent, fontWeight: 600, marginTop: 8 }}>{p.brand.site}</div>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+          <Logo size={150} />
+          <div>
+            <div style={{ fontSize: 50, fontWeight: 700 }}>{p.brand.handle ? `@${p.brand.handle.replace(/^@/, '')}` : p.brand.name}</div>
+            <div style={{ fontSize: 34, color: COLOR.accent, fontWeight: 600, marginTop: 8 }}>{t.follow}</div>
+          </div>
+        </div>
         <div style={{ fontSize: 28, color: COLOR.muted, marginTop: 30, lineHeight: 1.4 }}>{t.disclaimer}</div>
-        <div style={{ fontSize: 26, color: COLOR.muted, marginTop: 10 }}>{t.source}</div>
       </div>
     </Scene>
   );

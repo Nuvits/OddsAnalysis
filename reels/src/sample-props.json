@@ -1,6 +1,6 @@
 {
   "lang": "en",
-  "brand": { "name": "Odds Memory", "site": "nuvits.github.io/OddsAnalysis", "handle": "" },
+  "brand": { "name": "Odds Memory", "handle": "oddsmemory" },
   "match": { "home": "Arsenal", "away": "Chelsea", "league": "England Premier League", "date": "22/11/2026", "time": "17:30" },
   "odds": [1.85, 3.5, 4.2],
   "n": 297,

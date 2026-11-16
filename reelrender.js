@@ -86,7 +86,7 @@ function fileNameFor(props) {
 // Renders the reel to outFile. onProgress receives { phase, done, total }.
 async function renderReel(rawProps, outFile, onProgress = () => {}) {
   const props = validateProps(rawProps);
-  const full = { ...props, brand: { name: 'Odds Memory', site: '', handle: '', ...loadBrand() } };
+  const full = { ...props, brand: { name: 'Odds Memory', handle: '', ...loadBrand() } };
   onProgress({ phase: 'preparing', done: 0, total: 0 });
   await ensureEngine(onProgress);
   fs.writeFileSync(path.join(ENGINE, 'props.json'), JSON.stringify(full));

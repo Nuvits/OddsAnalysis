@@ -1,10 +1,12 @@
 # Odds Memory
 
+**Live site:** [nuvits.github.io/OddsAnalysis](https://nuvits.github.io/OddsAnalysis/) · **Instagram:** [@oddsmemory](https://www.instagram.com/oddsmemory/)
+
 Enter the **bwin** full-time odds (1 / X / 2) of an upcoming football match. The page finds past matches where bwin
 offered similar odds and shows how they ended: full-time and half-time result, HT/FT, both teams to score,
 over/under 1.5 / 2.5 / 3.5, first-half over/under 1.5 and total goals.
 
-The interface is available in **Turkish and English** (switch in the top bar).
+The interface is in **English** by default, with Turkish available via the TR/EN switch in the top bar.
 
 ## Data
 
@@ -71,7 +73,7 @@ On other systems, run `node server.js --open` or `node server.js --update` inste
 
 A **Create Reels video** button next to the results turns the current analysis into a silent 30-second, 1080×1920 MP4.
 You add music in Instagram, where licensed tracks are available. The video has six scenes: hook, odds and number of
-matches, full-time result, goals, top HT/FT outcomes, and a closing call to comment with a disclaimer.
+matches, full-time result, goals, top HT/FT outcomes, and a closing scene (call to comment, follow reminder, disclaimer).
 
 - **Local page:** the video is rendered on your computer and saved in `reels/out/`.
 - **Online page (GitHub Pages), e.g. from a phone:** the button opens a pre-filled GitHub issue titled
@@ -81,7 +83,8 @@ matches, full-time result, goals, top HT/FT outcomes, and a closing call to comm
   ([`reelrender.js`](reelrender.js)). You must be signed in to GitHub in the phone's browser.
 
 - The template is a [Remotion](https://www.remotion.dev) project in [`reels/`](reels/) (`src/Reel.jsx`).
-- Branding (name, site, Instagram handle) is set in [`reels/brand.json`](reels/brand.json).
+- Branding: name and Instagram handle in [`reels/brand.json`](reels/brand.json); the logo is [`reels/src/logo.jpg`](reels/src/logo.jpg)
+  (shown top-left in every scene and in the closing scene).
 - Remotion is installed automatically the first time a video is made. It goes into
   `%USERPROFILE%\.odds-analysis\reels-engine`, outside the project, because `node_modules` does not work on
   synced drives such as Google Drive. Override the location with `ODDS_REELS_ENGINE`.
