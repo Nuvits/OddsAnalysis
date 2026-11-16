@@ -65,6 +65,15 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 .progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: transparent; }
 .progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s; }
 .picked small { color: var(--muted); }
+.reel-btn { margin-left: auto; }
+.reel-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-top: 12px; }
+.reel-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.reel-form input { padding: 7px 9px; border-radius: 7px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font: inherit; font-weight: 400; }
+.reel-status { margin-top: 16px; font-size: 13px; color: var(--muted); }
+.reel-bar { height: 8px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; margin-bottom: 6px; }
+.reel-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s; }
+#reelResult { margin-top: 14px; text-align: center; }
+#reelVideo { width: 100%; max-width: 270px; aspect-ratio: 9 / 16; border-radius: 10px; background: #000; }
 .fx-note { margin-top: 8px; font-size: 12px; line-height: 1.5; color: var(--muted); }
 .fx-note b { color: var(--text); font-weight: 600; }
 .fx-note .warn { color: var(--draw); }

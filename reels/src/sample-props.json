@@ -1,0 +1,20 @@
+{
+  "lang": "en",
+  "brand": { "name": "Odds Memory", "site": "nuvits.github.io/OddsAnalysis", "handle": "" },
+  "match": { "home": "Arsenal", "away": "Chelsea", "league": "England Premier League", "date": "22/11/2026", "time": "17:30" },
+  "odds": [1.85, 3.5, 4.2],
+  "n": 297,
+  "exact": false,
+  "tolText": "±0.05",
+  "filterText": "all dates · all leagues",
+  "ft": [0.498, 0.316, 0.185],
+  "implied": [0.508, 0.268, 0.224],
+  "ht": [0.377, 0.468, 0.155],
+  "htN": 297,
+  "btts": 0.552,
+  "ou15": 0.74,
+  "ou25": 0.48,
+  "ou35": 0.25,
+  "avgGoals": 2.62,
+  "htft": [{ "k": "1/1", "p": 0.303 }, { "k": "0/0", "p": 0.2 }, { "k": "0/1", "p": 0.15 }]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "odds-analysis-reels",
+  "private": true,
+  "description": "Instagram Reels template for Odds Memory, rendered with Remotion",
+  "scripts": {
+    "studio": "remotion studio src/index.jsx",
+    "render": "remotion render src/index.jsx Reel"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.544",
+    "@remotion/google-fonts": "4.0.544",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.544"
+  }
+}

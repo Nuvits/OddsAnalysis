@@ -1,0 +1,65 @@
+name: Make reel
+
+# The site's "Create reel" button opens a pre-filled issue titled "Reel: …" with the analysis as JSON.
+# This workflow renders the 30-second video, attaches it to a release and replies on the issue with the link.
+# Only issues opened by the repository owner are processed.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write   # create the release that holds the video
+  issues: write     # reply and close the issue
+
+concurrency:
+  group: reel
+  cancel-in-progress: false
+
+jobs:
+  reel:
+    if: github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, 'Reel:')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE: ${{ github.event.issue.number }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # Remotion and its headless browser, reused between runs
+      - name: Cache the video engine
+        uses: actions/cache@v4
+        with:
+          path: ~/.odds-analysis/reels-engine/node_modules
+          key: reels-engine-${{ runner.os }}-${{ hashFiles('reels/package.json') }}
+
+      - name: Read the request
+        id: props
+        run: node .github/scripts/reel-from-issue.js
+
+      - name: Render the video
+        env:
+          FILE: ${{ steps.props.outputs.file }}
+        run: node reelrender.js reel-props.json "out/$FILE"
+
+      - name: Publish and reply
+        env:
+          FILE: ${{ steps.props.outputs.file }}
+          TITLE: ${{ steps.props.outputs.title }}
+        run: |
+          TAG="reel-$ISSUE"
+          gh release create "$TAG" "out/$FILE" --title "Reel: $TITLE" \
+            --notes "30-second Instagram Reel (1080×1920, silent – add music in Instagram). Requested in #$ISSUE."
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$FILE"
+          gh issue comment "$ISSUE" --body "🎬 **Your reel is ready:** $URL
+
+          Tap the link to download the MP4, then post it on Instagram and add music there."
+          gh issue close "$ISSUE"
+
+      - name: Report a failure
+        if: failure()
+        run: |
+          gh issue comment "$ISSUE" --body "⚠️ The reel could not be created. Details: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"

@@ -8,3 +8,7 @@ Oran-Analizi.html
 # Old iddaa version and local settings
 eski-iddaa/
 .claude/
+
+# Rendered Reels videos
+reels/out/
+reels/node_modules/

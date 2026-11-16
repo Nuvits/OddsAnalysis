@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Odds Analysis (bwin)</title>
+<title>Odds Memory</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%231f8a5b'/><path d='M9 20l5-6 4 3 5-7' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -98,6 +98,7 @@
       <div class="summary">
         <div class="big"><span id="nMatch">0</span><small data-i18n="matchingMatches"></small></div>
         <div class="crit" id="crit"></div>
+        <button class="btn primary reel-btn" id="btnReel" type="button" data-i18n="makeReel"></button>
       </div>
       <div class="cards" id="cards"></div>
       <div class="list-head">
@@ -131,6 +132,31 @@
   </div>
   <div class="dlg-foot">
     <button class="btn primary" id="impGo" type="button" disabled data-i18n="import"></button>
+  </div>
+</dialog>
+
+<dialog id="dlgReel" class="dlg narrow">
+  <form method="dialog" class="dlg-head"><h2 data-i18n="reelTitle"></h2><button class="x" data-i18n-aria="close">×</button></form>
+  <div class="dlg-body">
+    <p class="hint" data-i18n="reelHint"></p>
+    <div class="reel-form">
+      <label><span data-i18n="reelHome"></span><input id="reelHome" autocomplete="off"></label>
+      <label><span data-i18n="reelAway"></span><input id="reelAway" autocomplete="off"></label>
+      <label><span data-i18n="reelLeague"></span><input id="reelLeague" autocomplete="off"></label>
+      <label><span data-i18n="reelDate"></span><input id="reelDate" type="date"></label>
+      <label><span data-i18n="reelTime"></span><input id="reelTime" type="time"></label>
+    </div>
+    <div class="reel-status" id="reelStatus" hidden>
+      <div class="reel-bar"><i></i></div>
+      <span id="reelPhase"></span>
+    </div>
+    <div id="reelResult" hidden>
+      <video id="reelVideo" controls playsinline></video>
+      <p class="hint" id="reelSaved"></p>
+    </div>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn primary" id="reelGo" type="button" data-i18n="reelCreate"></button>
   </div>
 </dialog>
 

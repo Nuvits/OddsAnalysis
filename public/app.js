@@ -1,5 +1,5 @@
 'use strict';
-/* Odds Analysis (bwin) – client side.
+/* Odds Memory – client side.
    All data is loaded once; matching and statistics run in the browser.
    Match row: [league, date, home, away, odd1, oddX, odd2, ftHome, ftAway, htHome, htAway]
    Runs in three modes:
@@ -13,6 +13,8 @@ const ODD_INPUTS = ['ms1', 'ms0', 'ms2'];
 
 const EMBED = typeof window.EMBEDDED_DATA === 'string';
 const MODE = EMBED ? (window.EMBED_MODE === 'web' ? 'web' : 'file') : 'server';
+// Web mode: reels are rendered by a GitHub workflow in this repository (see .github/workflows/reel.yml)
+const REEL_REPO = MODE === 'web' && /^[\w.-]+\/[\w.-]+$/.test(window.REEL_REPO || '') ? window.REEL_REPO : '';
 
 // =====================================================================
 // Translations
@@ -36,7 +38,7 @@ const LEAGUE_NAMES = {
 
 const I18N = {
   tr: {
-    appName: 'Oran Analizi', title: 'Oran Analizi (bwin)',
+    appName: 'Odds Memory', title: 'Odds Memory',
     update: 'Verileri Güncelle', updating: 'Güncelleniyor…', downloading: 'İndiriliyor… %{p}', reloading: 'Yükleniyor…',
     dataMenu: 'Veri ▾', exportJson: 'JSON olarak dışa aktar (tam yedek)', exportCsv: 'CSV olarak dışa aktar',
     importBackup: 'Yedekten içe aktar…', lastUpdateDetails: 'Son güncelleme ayrıntısı',
@@ -91,9 +93,22 @@ const I18N = {
     logFailed: 'İndirilemeyen dosyalar ({n}):',
     fileChosen: '<b>{name}</b> seçildi ({mb} MB).',
     importedToast: 'İçe aktarıldı: {added} yeni, {updated} güncellendi, {unchanged} zaten vardı{invalid}. Toplam {total}.', invalidRows: ', {n} geçersiz satır',
+    // reels
+    makeReel: 'Reels videosu oluştur', reelTitle: 'Reels videosu oluştur',
+    reelHint: 'Şu anki analiz (oranlar, filtreler, eşleşen maçlar) 30 saniyelik, 1080×1920 boyutunda sessiz bir Reels videosuna dönüşür. İlk seferde video motoru kurulur; bu birkaç dakika sürebilir.',
+    reelHome: 'Ev sahibi', reelAway: 'Deplasman', reelLeague: 'Lig', reelDate: 'Tarih', reelTime: 'Saat',
+    reelCreate: 'Oluştur', reelCreating: 'Oluşturuluyor…',
+    reelPhase_preparing: 'Hazırlanıyor…', reelPhase_installing: 'Video motoru kuruluyor (yalnızca ilk sefer, birkaç dakika)…',
+    reelPhase_rendering: 'Kareler çiziliyor: {d}/{t}', reelPhase_encoding: 'Video kodlanıyor: {d}/{t}',
+    reelSaved: 'Kaydedildi: <b>reels/out/{name}</b>. Klasör Google Drive ile telefonunuza da gelir. Müziği Instagram\'da ekleyin.',
+    reelNeedTeams: 'Ev sahibi ve deplasman adını yazın.', reelFailed: 'Video oluşturulamadı: {e}',
+    reelSmall: 'Dikkat: yalnızca {n} eşleşen maç var, yüzdeler güvenilir olmayabilir.',
+    reelHintWeb: 'Bu sitede video GitHub\'da üretilir. “GitHub\'da devam et” bilgileri dolu bir GitHub sayfası açar; orada “Submit new issue” deyin. 2-4 dakika içinde aynı sayfaya video bağlantısı gelir. GitHub hesabınızla giriş yapmış olmanız gerekir.',
+    reelGoWeb: 'GitHub\'da devam et',
+    reelOpened: 'GitHub yeni sekmede açıldı. “Submit new issue” deyin; video bağlantısı 2-4 dakika içinde o sayfada görünür.',
   },
   en: {
-    appName: 'Odds Analysis', title: 'Odds Analysis (bwin)',
+    appName: 'Odds Memory', title: 'Odds Memory',
     update: 'Update data', updating: 'Updating…', downloading: 'Downloading… {p}%', reloading: 'Loading…',
     dataMenu: 'Data ▾', exportJson: 'Export as JSON (full backup)', exportCsv: 'Export as CSV',
     importBackup: 'Import from backup…', lastUpdateDetails: 'Last update details',
@@ -114,7 +129,7 @@ const I18N = {
     loadingData: 'Opening data…', updatedAt: 'Last update', dataDate: 'Data as of', matchesRange: '<b>{n}</b> matches · {from} – {to}',
     noData: 'No data yet – {hint}',
     hint_server: 'press “Update data”', hint_file: 'update on the computer with start.bat', hint_web: 'the site updates itself, check again in a few hours',
-    bulletinManual: '— Enter odds manually ({n} upcoming matches) —', bulletinEmpty: '— No upcoming matches listed; enter odds manually —',
+    bulletinManual: '— Enter odds manually (upcoming matches: {n}) —', bulletinEmpty: '— No upcoming matches listed; enter odds manually —',
     today: 'Today', tomorrow: 'Tomorrow',
     fxPublished: 'List published on football-data <b>{when}</b> · upcoming matches: {n}.', fxFetched: 'List fetched {when}.',
     fxNext: 'Next lists (at the latest): {slots}', fxMidweek: '(if there are midweek games)', fxWeekend: '(weekend games)',
@@ -144,6 +159,18 @@ const I18N = {
     logFailed: 'Files that failed ({n}):',
     fileChosen: '<b>{name}</b> selected ({mb} MB).',
     importedToast: 'Imported: {added} new, {updated} updated, {unchanged} already present{invalid}. {total} in total.', invalidRows: ', {n} invalid rows',
+    makeReel: 'Create Reels video', reelTitle: 'Create Reels video',
+    reelHint: 'Turns the current analysis (odds, filters, matching matches) into a silent 30-second 1080×1920 Reels video. The first time, the video engine is installed, which can take a few minutes.',
+    reelHome: 'Home team', reelAway: 'Away team', reelLeague: 'League', reelDate: 'Date', reelTime: 'Time',
+    reelCreate: 'Create', reelCreating: 'Creating…',
+    reelPhase_preparing: 'Preparing…', reelPhase_installing: 'Installing the video engine (first time only, a few minutes)…',
+    reelPhase_rendering: 'Rendering frames: {d}/{t}', reelPhase_encoding: 'Encoding video: {d}/{t}',
+    reelSaved: 'Saved: <b>reels/out/{name}</b>. The folder syncs to your phone via Google Drive. Add music in Instagram.',
+    reelNeedTeams: 'Enter the home and away team names.', reelFailed: 'Could not create the video: {e}',
+    reelSmall: 'Note: only {n} matching matches, so the percentages may be unreliable.',
+    reelHintWeb: 'On this site the video is made on GitHub. “Continue on GitHub” opens a pre-filled GitHub page; tap “Submit new issue” there. A link to the video appears on that page in 2–4 minutes. You need to be signed in to GitHub.',
+    reelGoWeb: 'Continue on GitHub',
+    reelOpened: 'GitHub opened in a new tab. Tap “Submit new issue”; the video link appears there in 2–4 minutes.',
   },
 };
 
@@ -155,9 +182,10 @@ function t(key, vars) {
   return s;
 }
 
+// English is the default for everyone; Turkish only when the visitor picked it with the TR/EN switch.
 function detectLang() {
-  try { const saved = localStorage.getItem('odds-lang'); if (saved === 'tr' || saved === 'en') return saved; } catch { /* ignore */ }
-  return (navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+  try { if (localStorage.getItem('odds-lang') === 'tr') return 'tr'; } catch { /* ignore */ }
+  return 'en';
 }
 
 function applyStaticTexts() {
@@ -167,6 +195,10 @@ function applyStaticTexts() {
   for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
   for (const el of document.querySelectorAll('[data-i18n-placeholder]')) el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder));
   for (const b of document.querySelectorAll('#segLang button')) b.classList.toggle('on', b.dataset.v === LANG);
+  if (MODE === 'web') { // reels go through GitHub here
+    document.querySelector('#dlgReel .hint').textContent = t('reelHintWeb');
+    $('reelGo').textContent = t('reelGoWeb');
+  }
 }
 
 function setLang(lang) {
@@ -336,6 +368,7 @@ function showPicked(f) {
 
 function pickFixture(id) {
   const f = S.fixtures.find((x) => fixtureId(x) === id);
+  S.picked = f || null;
   showPicked(f);
   if (!f) return;
   $('ms1').value = fmtOdd(f.o1); $('ms0').value = fmtOdd(f.o0); $('ms2').value = fmtOdd(f.o2);
@@ -647,6 +680,104 @@ async function doImport() {
 }
 
 // =====================================================================
+// Instagram Reels (server mode only)
+// =====================================================================
+function openReelDialog() {
+  const f = S.picked;
+  if (f) {
+    $('reelHome').value = f.home; $('reelAway').value = f.away; $('reelLeague').value = lgName(f.lg);
+    $('reelDate').value = f.date; $('reelTime').value = /^\d{2}:\d{2}$/.test(f.time) ? f.time : '';
+  } else if (!$('reelDate').value) {
+    $('reelDate').value = localIso(new Date());
+  }
+  $('reelStatus').hidden = true; $('reelResult').hidden = true;
+  const n = S.last?.set.length || 0;
+  $('reelPhase').textContent = n < 30 ? t('reelSmall', { n }) : '';
+  $('reelStatus').hidden = n >= 30;
+  $('reelStatus').querySelector('.reel-bar').hidden = true;
+  $('dlgReel').showModal();
+}
+
+function buildReelProps() {
+  const { set, t: target } = S.last;
+  const st = computeStats(set);
+  const n = st.n, iy = st.iyN;
+  const dateIso = $('reelDate').value;
+  const htft = Object.entries(st.htft).map(([k, c]) => ({ k, p: c / iy })).sort((a, b) => b.p - a.p).slice(0, 3);
+  const leaguesTxt = S.lgSel.size ? t('nLeagues', { n: S.lgSel.size }) : t('allLeagues').toLocaleLowerCase(LOC());
+  return {
+    lang: LANG,
+    match: { home: $('reelHome').value.trim(), away: $('reelAway').value.trim(), league: $('reelLeague').value.trim(), date: fmtDate(dateIso), dateIso, time: $('reelTime').value },
+    odds: target, n, exact: S.mode === 'exact', tolText: `±${fmtOdd(S.tol)}`,
+    filterText: `${t('rangeText_' + S.range)} · ${leaguesTxt}`,
+    ft: [st.ms[1] / n, st.ms[0] / n, st.ms[2] / n], implied: implied(target),
+    ht: iy ? [st.iy[1] / iy, st.iy[0] / iy, st.iy[2] / iy] : [0, 0, 0], htN: iy,
+    btts: st.kg.yes / n, ou15: st.o15.over / n, ou25: st.o25.over / n, ou35: st.o35.over / n,
+    avgGoals: st.goals / n, htft,
+  };
+}
+
+async function createReel() {
+  if (!$('reelHome').value.trim() || !$('reelAway').value.trim()) { $('reelStatus').hidden = false; $('reelPhase').textContent = t('reelNeedTeams'); return; }
+  const go = $('reelGo'); const bar = $('reelStatus').querySelector('.reel-bar');
+  go.disabled = true; go.textContent = t('reelCreating');
+  $('reelResult').hidden = true; $('reelStatus').hidden = false; bar.hidden = false; bar.firstElementChild.style.width = '0%';
+  try {
+    await api('/api/reel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildReelProps()) });
+    for (;;) {
+      const j = await api('/api/reel');
+      const frac = j.total ? j.done / j.total : 0;
+      // rendering = first 85 %, encoding = the rest
+      bar.firstElementChild.style.width = Math.round((j.phase === 'encoding' ? 0.85 + 0.15 * frac : 0.85 * frac) * 100) + '%';
+      const phase = (j.phase === 'rendering' || j.phase === 'encoding') && !j.total ? 'preparing' : j.phase; // bundling: no frame counts yet
+      $('reelPhase').textContent = t('reelPhase_' + (phase in { preparing: 1, installing: 1, rendering: 1, encoding: 1 } ? phase : 'preparing'), { d: j.done, t: j.total });
+      if (!j.running) {
+        if (j.error) throw new Error(j.error);
+        if (j.file) {
+          bar.firstElementChild.style.width = '100%';
+          $('reelPhase').textContent = '';
+          $('reelVideo').src = `/api/reel/file?name=${encodeURIComponent(j.file)}&v=${Date.now()}`;
+          $('reelSaved').innerHTML = t('reelSaved', { name: esc(j.file) });
+          $('reelResult').hidden = false;
+        }
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  } catch (e) {
+    $('reelPhase').textContent = t('reelFailed', { e: e.message });
+  } finally {
+    go.disabled = false; go.textContent = t('reelCreate');
+  }
+}
+
+// Web mode: open a pre-filled GitHub issue; the "Make reel" workflow renders the video and replies with a link.
+function createReelOnGitHub() {
+  if (!$('reelHome').value.trim() || !$('reelAway').value.trim()) { $('reelStatus').hidden = false; $('reelPhase').textContent = t('reelNeedTeams'); return; }
+  const p = buildReelProps();
+  const m = p.match;
+  const odds = p.odds.map((o) => o.toFixed(2)).join(' / ');
+  const body = [
+    'Reel request from Odds Memory – submit this issue to create the video.',
+    '',
+    '| | |', '|---|---|',
+    `| Match | ${m.home} – ${m.away} |`,
+    `| League / date | ${[m.league, m.date, m.time].filter(Boolean).join(' · ')} |`,
+    `| bwin odds (1 / X / 2) | ${odds} |`,
+    `| Matching | ${p.n} matches · ${p.exact ? 'exact odds' : p.tolText} · ${p.filterText} |`,
+    '',
+    'The video link will be posted here in 2–4 minutes.',
+    '',
+    '<!-- Data for the video – please do not edit. -->',
+    '```json', JSON.stringify(p), '```',
+  ].join('\n');
+  const url = `https://github.com/${REEL_REPO}/issues/new?title=${encodeURIComponent(`Reel: ${m.home} – ${m.away}`)}&body=${encodeURIComponent(body)}`;
+  window.open(url, '_blank', 'noopener');
+  $('reelStatus').hidden = false; $('reelStatus').querySelector('.reel-bar').hidden = true;
+  $('reelPhase').textContent = t('reelOpened');
+}
+
+// =====================================================================
 // Events
 // =====================================================================
 function bind() {
@@ -658,7 +789,7 @@ function bind() {
   $('bulletin').addEventListener('change', (e) => pickFixture(e.target.value));
   $('btnClear').addEventListener('click', () => {
     for (const k of ODD_INPUTS) { $(k).value = ''; $(k).classList.remove('bad'); }
-    $('bulletin').value = ''; $('picked').hidden = true;
+    $('bulletin').value = ''; $('picked').hidden = true; S.picked = null;
     analyze(); $('ms1').focus();
   });
   $('segMode').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.mode = b.dataset.v; savePrefs(); analyze(); });
@@ -689,6 +820,8 @@ function bind() {
   $('btnImport').addEventListener('click', () => { $('impFile').value = ''; $('impInfo').textContent = ''; $('impGo').disabled = true; $('dlgImport').showModal(); });
   $('impFile').addEventListener('change', (e) => onImpFile(e.target.files[0]));
   $('impGo').addEventListener('click', doImport);
+  $('btnReel').addEventListener('click', openReelDialog);
+  $('reelGo').addEventListener('click', () => (MODE === 'web' ? createReelOnGitHub() : createReel()));
 }
 
 // =====================================================================
@@ -700,7 +833,10 @@ applyStaticTexts();
 bind();
 $('tol').value = fmtOdd(S.tol);
 syncControls();
-if (EMBED) document.querySelector('.actions').hidden = true; // update/export need the local server
+if (EMBED) { // update, export and video rendering need the local server
+  document.querySelector('.actions').hidden = true;
+  $('btnReel').hidden = !REEL_REPO; // web: via GitHub; downloaded file: not available
+}
 $('status').textContent = t('loadingData');
 loadData()
   .then(async () => {

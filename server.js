@@ -1,5 +1,5 @@
 'use strict';
-// Odds Analysis (bwin) – local server.
+// Odds Memory – local server.
 //  - serves the page in public/
 //  - downloads match results and bwin odds from football-data.co.uk
 //  - stores everything in data/bwin.json
@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const fd = require('./footballdata');
+const reels = require('./reelrender');
 
 const PORT = Number(process.env.PORT) || 3737;
 const ROOT = __dirname;
@@ -24,6 +25,10 @@ const DATA_DIR = process.env.ODDS_DATA_DIR || path.join(ROOT, 'data');
 const DB_FILE = path.join(DATA_DIR, 'bwin.json');
 const STANDALONE_FILE = process.env.ODDS_STANDALONE || path.join(ROOT, 'odds-analysis.html');
 const EMBED_MODE = process.env.ODDS_EMBED_MODE === 'web' ? 'web' : 'file';
+// "owner/repo" on GitHub: in web mode the "Create reel" button opens a pre-filled issue there (see .github/workflows/reel.yml)
+const REEL_REPO = /^[\w.-]+\/[\w.-]+$/.test(process.env.ODDS_REEL_REPO || '') ? process.env.ODDS_REEL_REPO : '';
+// Finished Instagram Reels videos (rendered by reelrender.js)
+const REELS_OUT = path.join(ROOT, 'reels', 'out');
 
 // A match in memory = [league, date, home, away, odd1, oddX, odd2, ftHome, ftAway, htHome, htAway]
 const K = { lg: 0, date: 1, home: 2, away: 3, o1: 4, o0: 5, o2: 6, fh: 7, fa: 8, hh: 9, ha: 10 };
@@ -87,7 +92,7 @@ function writeStandalone() {
     if (!html.includes(cssTag) || !html.includes(jsTag)) throw new Error('index.html is missing the expected tags');
     html = html
       .replace(cssTag, () => `<style>\n${css}\n</style>`)
-      .replace(jsTag, () => `<script>window.EMBED_MODE="${EMBED_MODE}";window.EMBEDDED_DATA="${b64}";</script>\n<script>\n${js}\n</script>`);
+      .replace(jsTag, () => `<script>window.EMBED_MODE="${EMBED_MODE}";window.REEL_REPO=${JSON.stringify(REEL_REPO)};window.EMBEDDED_DATA="${b64}";</script>\n<script>\n${js}\n</script>`);
     fs.mkdirSync(path.dirname(STANDALONE_FILE), { recursive: true });
     writeFileSafe(STANDALONE_FILE, html);
     console.log(`Single-file page written: ${path.basename(STANDALONE_FILE)} (${(Buffer.byteLength(html) / 1048576).toFixed(1)} MB)`);
@@ -225,6 +230,20 @@ function importText(text) {
   return { ...counts, total: db.matches.size };
 }
 
+// ---------- Instagram Reels rendering (see reelrender.js) ----------
+let reelJob = { running: false, phase: "", done: 0, total: 0, file: null, error: null };
+
+async function startReel(rawProps) {
+  if (reelJob.running) throw new Error("A reel is already being rendered");
+  const props = reels.validateProps(rawProps); // throws on bad input before the job starts
+  reelJob = { running: true, phase: "preparing", done: 0, total: 0, file: null, error: null };
+  const name = reels.fileNameFor(props);
+  reels.renderReel(props, path.join(REELS_OUT, name), (p) => Object.assign(reelJob, p))
+    .then(() => { reelJob.file = name; console.log(`Reel saved: reels/out/${name}`); })
+    .catch((e) => { reelJob.error = e.message; console.error("Reel rendering failed:", e.message); })
+    .finally(() => { reelJob.running = false; });
+}
+
 // ---------- CSV export (semicolon-separated, decimal comma: opens directly in Excel with TR/EU locale) ----------
 function toCsv() {
   const f = (v) => (v == null ? '' : v.toFixed(2).replace('.', ','));
@@ -289,6 +308,20 @@ async function handle(req, res) {
     if (p === '/api/import' && req.method === 'POST') {
       return send(req, res, 200, { summary: importText(await readBody(req)) });
     }
+    if (p === '/api/reel' && req.method === 'POST') {
+      if (!reelJob.running) {
+        try { await startReel(JSON.parse(await readBody(req, 1024 * 1024))); } catch (e) { return send(req, res, 400, { error: e.message }); }
+      }
+      return send(req, res, 202, reelJob);
+    }
+    if (p === '/api/reel' && req.method === 'GET') return send(req, res, 200, reelJob);
+    if (p === '/api/reel/file' && req.method === 'GET') {
+      const name = url.searchParams.get('name') || '';
+      const file = path.join(REELS_OUT, name);
+      if (!/^[\w.-]+\.mp4$/.test(name) || !fs.existsSync(file)) return send(req, res, 404, { error: 'Not found' });
+      res.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': fs.statSync(file).size, 'Content-Disposition': `inline; filename="${name}"` });
+      return fs.createReadStream(file).pipe(res);
+    }
     if (p === '/api/export.json' && req.method === 'GET') {
       const stamp = new Date().toLocaleDateString('sv-SE');
       return send(req, res, 200, JSON.stringify({ version: 2, exported: new Date().toISOString(), columns: Object.keys(K), matches: [...db.matches.values()] }),
@@ -335,7 +368,7 @@ if (process.argv.includes('--update')) {
     }
   });
   server.listen(PORT, '127.0.0.1', () => {
-    console.log(`Odds Analysis (bwin) is running: ${url}  (matches stored: ${db.matches.size})`);
+    console.log(`Odds Memory is running: ${url}  (matches stored: ${db.matches.size})`);
     console.log('Close this window or press Ctrl+C to stop.');
     openBrowser();
     // Update on every start; on success odds-analysis.html is rewritten as well.

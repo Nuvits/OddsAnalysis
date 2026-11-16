@@ -1,4 +1,4 @@
-# Odds Analysis (bwin)
+# Odds Memory
 
 Enter the **bwin** full-time odds (1 / X / 2) of an upcoming football match. The page finds past matches where bwin
 offered similar odds and shows how they ended: full-time and half-time result, HT/FT, both teams to score,
@@ -64,6 +64,32 @@ On other systems, run `node server.js --open` or `node server.js --update` inste
 | `ODDS_DATA_DIR` | data folder (default `./data`) |
 | `ODDS_STANDALONE` | path of the single-file page (default `./odds-analysis.html`) |
 | `ODDS_EMBED_MODE` | `file` (downloaded file) or `web` (self-updating site) |
+| `ODDS_REEL_REPO` | `owner/repo` for the online "Create reel" button (set by the Pages workflow) |
+| `ODDS_REELS_ENGINE` | where Remotion is installed (default `~/.odds-analysis/reels-engine`) |
+
+## Instagram Reels videos
+
+A **Create Reels video** button next to the results turns the current analysis into a silent 30-second, 1080×1920 MP4.
+You add music in Instagram, where licensed tracks are available. The video has six scenes: hook, odds and number of
+matches, full-time result, goals, top HT/FT outcomes, and a closing call to comment with a disclaimer.
+
+- **Local page:** the video is rendered on your computer and saved in `reels/out/`.
+- **Online page (GitHub Pages), e.g. from a phone:** the button opens a pre-filled GitHub issue titled
+  `Reel: Home – Away`. Submit it, and the [`Make reel`](.github/workflows/reel.yml) workflow renders the video on
+  GitHub, attaches it to a release and replies on the issue with a download link (2–4 minutes). Only issues opened
+  by the repository owner are processed; the request data is validated before rendering
+  ([`reelrender.js`](reelrender.js)). You must be signed in to GitHub in the phone's browser.
+
+- The template is a [Remotion](https://www.remotion.dev) project in [`reels/`](reels/) (`src/Reel.jsx`).
+- Branding (name, site, Instagram handle) is set in [`reels/brand.json`](reels/brand.json).
+- Remotion is installed automatically the first time a video is made. It goes into
+  `%USERPROFILE%\.odds-analysis\reels-engine`, outside the project, because `node_modules` does not work on
+  synced drives such as Google Drive. Override the location with `ODDS_REELS_ENGINE`.
+- Finished videos are saved in `reels/out/`.
+- To preview or tweak the template, run `npx remotion studio src/index.jsx` in the engine folder after copying
+  `reels/src` there.
+- Remotion is free for individuals and small companies; larger companies need a
+  [company license](https://www.remotion.dev/license).
 
 ## Files
 
@@ -72,7 +98,10 @@ On other systems, run `node server.js --open` or `node server.js --update` inste
 | `server.js` | Local server, update job, storage, import/export and the single-file page builder |
 | `footballdata.js` | Downloads and parses the football-data.co.uk season and fixture files |
 | `public/` | The page (`index.html`, `app.js`, `style.css`), including both languages |
+| `reels/` | Remotion template for Instagram Reels videos and its branding settings |
+| `reelrender.js` | Validates reel data and renders the video (used by the local server and the workflow) |
 | `.github/workflows/pages.yml` | Scheduled update and GitHub Pages deployment |
+| `.github/workflows/reel.yml` | Renders a reel when the owner opens a `Reel:` issue |
 
 ## Disclaimer
 

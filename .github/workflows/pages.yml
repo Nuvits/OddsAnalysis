@@ -56,6 +56,7 @@ jobs:
           ODDS_DATA_DIR: data
           ODDS_STANDALONE: _site/index.html
           ODDS_EMBED_MODE: web
+          ODDS_REEL_REPO: ${{ github.repository }}   # enables the "Create reel" button (see reel.yml)
 
       - name: Save data for the next run
         uses: actions/cache/save@v4
