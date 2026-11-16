@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odds Analysis (bwin)</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%231f8a5b'/><path d='M9 20l5-6 4 3 5-7' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="var(--accent)"/><path d="M8 21l5-6 4 3 6-8" stroke="var(--accent-ink)" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h1><span data-i18n="appName"></span> <span class="src-tag">bwin</span></h1>
+  </div>
+  <div class="status" id="status"></div>
+  <div class="seg lang" id="segLang" role="group" aria-label="Language / Dil">
+    <button type="button" data-v="tr">TR</button>
+    <button type="button" data-v="en">EN</button>
+  </div>
+  <div class="actions">
+    <button class="btn primary" id="btnUpdate" type="button">
+      <span class="spin" aria-hidden="true"></span><span class="lbl" data-i18n="update"></span>
+    </button>
+    <div class="menu-wrap">
+      <button class="btn" id="btnData" type="button" aria-haspopup="true" aria-expanded="false" data-i18n="dataMenu"></button>
+      <div class="menu" id="dataMenu" hidden>
+        <a href="/api/export.json" download data-i18n="exportJson"></a>
+        <a href="/api/export.csv" download data-i18n="exportCsv"></a>
+        <button type="button" id="btnImport" data-i18n="importBackup"></button>
+        <button type="button" id="btnLastLog" data-i18n="lastUpdateDetails"></button>
+      </div>
+    </div>
+  </div>
+  <div class="progress" id="progress" hidden><i></i></div>
+</header>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<main class="layout">
+  <aside class="panel" id="panel">
+    <section class="block">
+      <label class="lbl-sm" for="bulletin" data-i18n="pickUpcoming"></label>
+      <select id="bulletin"></select>
+      <div class="fx-note" id="fxNote"></div>
+      <div class="picked" id="picked" hidden></div>
+    </section>
+
+    <section class="block odds">
+      <div class="odds-head"><span data-i18n="oddsTitle"></span><button class="link" id="btnClear" type="button" data-i18n="clear"></button></div>
+      <div class="og-row three">
+        <label><span>1</span><input id="ms1" inputmode="decimal" autocomplete="off" data-i18n-aria="oddHome"></label>
+        <label><span data-i18n="drawShort"></span><input id="ms0" inputmode="decimal" autocomplete="off" data-i18n-aria="oddDraw"></label>
+        <label><span>2</span><input id="ms2" inputmode="decimal" autocomplete="off" data-i18n-aria="oddAway"></label>
+      </div>
+      <p class="hint" data-i18n="oddsHint"></p>
+    </section>
+
+    <section class="block">
+      <div class="lbl-sm" data-i18n="matching"></div>
+      <div class="seg" id="segMode">
+        <button type="button" data-v="tol" data-i18n="modeRange"></button>
+        <button type="button" data-v="exact" data-i18n="modeExact"></button>
+      </div>
+      <div class="tol-row" id="tolRow">
+        <label for="tol" data-i18n="tolerance"></label>
+        <button type="button" class="step" data-d="-0.01" data-i18n-aria="decrease">−</button>
+        <input id="tol" inputmode="decimal">
+        <button type="button" class="step" data-d="0.01" data-i18n-aria="increase">+</button>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="lbl-sm" data-i18n="dateRange"></div>
+      <div class="seg wrap" id="segRange">
+        <button type="button" data-v="all" data-i18n="range_all"></button>
+        <button type="button" data-v="60" data-i18n="range_60"></button>
+        <button type="button" data-v="12" data-i18n="range_12"></button>
+        <button type="button" data-v="5" data-i18n="range_5"></button>
+        <button type="button" data-v="3" data-i18n="range_3"></button>
+        <button type="button" data-v="1" data-i18n="range_1"></button>
+      </div>
+      <div class="lbl-sm mt" data-i18n="league"></div>
+      <div class="ms-wrap">
+        <button type="button" class="ms-btn" id="lgBtn" aria-haspopup="true" aria-expanded="false"></button>
+        <div class="ms-pop" id="lgPop" hidden>
+          <input type="search" id="lgSearch" autocomplete="off" data-i18n-placeholder="searchLeagues">
+          <div class="ms-tools"><button type="button" class="link" id="lgNone" data-i18n="clearSelection"></button></div>
+          <div class="ms-list" id="lgList"></div>
+        </div>
+      </div>
+    </section>
+  </aside>
+
+  <section class="results" id="results">
+    <div class="empty" id="empty"></div>
+    <div id="out" hidden>
+      <div class="summary">
+        <div class="big"><span id="nMatch">0</span><small data-i18n="matchingMatches"></small></div>
+        <div class="crit" id="crit"></div>
+      </div>
+      <div class="cards" id="cards"></div>
+      <div class="list-head">
+        <h2 data-i18n="matchList"></h2>
+        <label class="sort"><span data-i18n="sort"></span>
+          <select id="sortBy">
+            <option value="date" data-i18n="sortDate"></option>
+            <option value="near" data-i18n="sortNear"></option>
+          </select>
+        </label>
+      </div>
+      <div class="tbl-wrap">
+        <table class="tbl" id="tbl">
+          <thead>
+            <tr><th data-i18n="colDate"></th><th class="l" data-i18n="colLeague"></th><th class="l" data-i18n="colMatch"></th><th>1</th><th data-i18n="drawShort"></th><th>2</th><th data-i18n="colHT"></th><th data-i18n="colFT"></th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn more" id="btnMore" type="button" hidden></button>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlgImport" class="dlg narrow">
+  <form method="dialog" class="dlg-head"><h2 data-i18n="importBackupTitle"></h2><button class="x" data-i18n-aria="close">×</button></form>
+  <div class="dlg-body">
+    <p class="hint" data-i18n="importHint"></p>
+    <input type="file" id="impFile" accept=".json,.csv">
+    <div id="impInfo" class="imp-info"></div>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn primary" id="impGo" type="button" disabled data-i18n="import"></button>
+  </div>
+</dialog>
+
+<dialog id="dlgLog" class="dlg narrow">
+  <form method="dialog" class="dlg-head"><h2 data-i18n="lastUpdate"></h2><button class="x" data-i18n-aria="close">×</button></form>
+  <div class="dlg-body" id="logBody"></div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Local data and generated files (rebuilt on every run)
+data/
+_site/
+odds-analysis.html
+Oran-Analizi.html
+*.tmp
+
+# Old iddaa version and local settings
+eski-iddaa/
+.claude/
