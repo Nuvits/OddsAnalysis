@@ -103,7 +103,7 @@ const I18N = {
     reelSaved: 'reels/out klasörüne kaydedildi: <b>{names}</b>. Klasör Google Drive ile telefonunuza da gelir.',
     reelLang_en: 'İngilizce', reelLang_tr: 'Türkçe', reelStep: '{lang} video ({s}/{n})',
     reelNeedTeams: 'Ev sahibi ve deplasman adını yazın.', reelFailed: 'Video oluşturulamadı: {e}',
-    reelSmall: 'Dikkat: yalnızca {n} eşleşen maç var, yüzdeler güvenilir olmayabilir.',
+    reelSmall: 'Yalnızca {n} eşleşen maç var. Doğru bir karşılaştırma için en az {m} maç gerekir, bu yüzden video oluşturulmaz. Aralığı genişletin ya da filtreleri azaltın.',
     reelHintWeb: 'Bu sitede videolar (İngilizce ve Türkçe) GitHub\'da üretilir. “GitHub\'da devam et” bilgileri dolu bir GitHub sayfası açar; orada “Submit new issue” deyin. 4-6 dakika içinde aynı sayfaya video bağlantıları gelir. GitHub hesabınızla giriş yapmış olmanız gerekir.',
     reelGoWeb: 'GitHub\'da devam et',
     reelOpened: 'GitHub yeni sekmede açıldı. “Submit new issue” deyin; video bağlantıları 4-6 dakika içinde o sayfada görünür.',
@@ -169,7 +169,7 @@ const I18N = {
     reelSaved: 'Saved in reels/out: <b>{names}</b>. The folder syncs to your phone via Google Drive.',
     reelLang_en: 'English', reelLang_tr: 'Turkish', reelStep: '{lang} video ({s}/{n})',
     reelNeedTeams: 'Enter the home and away team names.', reelFailed: 'Could not create the video: {e}',
-    reelSmall: 'Note: only {n} matching matches, so the percentages may be unreliable.',
+    reelSmall: 'Only {n} matching matches. A fair comparison needs at least {m}, so no video is made. Widen the range or remove filters.',
     reelHintWeb: 'On this site the videos (English and Turkish) are made on GitHub. “Continue on GitHub” opens a pre-filled GitHub page; tap “Submit new issue” there. Links to the videos appear on that page in 4–6 minutes. You need to be signed in to GitHub.',
     reelGoWeb: 'Continue on GitHub',
     reelOpened: 'GitHub opened in a new tab. Tap “Submit new issue”; the video links appear there in 4–6 minutes.',
@@ -494,11 +494,18 @@ function implied(target) {
   return inv.map((x) => x / s);
 }
 
+// Outcomes above this share are framed in red on the page and listed in their own reel scene
+const HOT = 0.75;
+// Fewer matching matches than this is not a reliable comparison: no red frames, no reels (reelrender.js checks it too)
+const MIN_MATCHES = 30;
+const isHot = (p, n) => n >= MIN_MATCHES && p > HOT;
+
 function cardRows(rows, n, impl) {
   if (!n) return `<div class="na">${t('noDataCard')}</div>`;
   const max = Math.max(...rows.map((r) => r[1]));
   return rows.map(([label, cnt], i) => {
     const p = cnt / n;
+    const hot = isHot(p, n) ? ' hot' : '';
     let im = '';
     if (impl) {
       const d = p - impl[i];
@@ -506,12 +513,29 @@ function cardRows(rows, n, impl) {
       const dTxt = (d >= 0 ? '+' : '−') + Math.abs(d * 100).toLocaleString(LOC(), { maximumFractionDigits: 1 });
       im = `<div class="impl">${t('impliedBy', { p: fmtPct(impl[i]) })} · <span class="${cls}">${t('points', { d: dTxt })}</span></div>`;
     }
-    return `<div class="row${cnt === max && cnt > 0 ? ' top' : ''}"><span class="k">${label}</span><span class="bar"><i style="width:${(p * 100).toFixed(1)}%"></i></span><span class="c">${fmtInt(cnt)}</span><span class="p">${fmtPct(p)}</span>${im}</div>`;
+    return `<div class="row${cnt === max && cnt > 0 ? ' top' : ''}${hot}"><span class="k">${label}</span><span class="bar"><i style="width:${(p * 100).toFixed(1)}%"></i></span><span class="c">${fmtInt(cnt)}</span><span class="p">${fmtPct(p)}</span>${im}</div>`;
   }).join('');
 }
 
 function card(title, n, rows, impl) {
-  return `<div class="card"><h3>${title}<small>${t('nMatches', { n: fmtInt(n) })}</small></h3>${cardRows(rows, n, impl)}</div>`;
+  const hot = n && rows.some(([, cnt]) => isHot(cnt / n, n)) ? ' hot' : '';
+  return `<div class="card${hot}"><h3>${title}<small>${t('nMatches', { n: fmtInt(n) })}</small></h3>${cardRows(rows, n, impl)}</div>`;
+}
+
+// Outcomes above 75 % (red-framed on the page), as { title, pick, p } – for the "above 75%" reel scene
+function outcomes(st) {
+  const X = t('drawShort'), list = [];
+  const add = (title, n, rows) => { for (const [pick, cnt] of rows) if (isHot(cnt / n, n)) list.push({ title, pick: String(pick), p: cnt / n }); };
+  add(t('cardFT'), st.n, [['1', st.ms[1]], [X, st.ms[0]], ['2', st.ms[2]]]);
+  add(t('cardHT'), st.iyN, [['1', st.iy[1]], [X, st.iy[0]], ['2', st.iy[2]]]);
+  add(t('cardBTTS'), st.n, [[t('yes'), st.kg.yes], [t('no'), st.kg.no]]);
+  add(t('cardOU25'), st.n, [[t('under'), st.o25.under], [t('over'), st.o25.over]]);
+  add(t('cardHTOU15'), st.iyN, [[t('under'), st.iy15.under], [t('over'), st.iy15.over]]);
+  add(t('cardOU15'), st.n, [[t('under'), st.o15.under], [t('over'), st.o15.over]]);
+  add(t('cardOU35'), st.n, [[t('under'), st.o35.under], [t('over'), st.o35.over]]);
+  add(t('cardGoals'), st.n, Object.entries(st.tg));
+  add(t('cardHTFT'), st.iyN, Object.entries(st.htft).map(([k, c]) => [k.split('/').map(drawLabel).join('/'), c]));
+  return list;
 }
 
 function renderResults() {
@@ -524,7 +548,7 @@ function renderResults() {
   const tolTxt = S.mode === 'exact' ? t('exact') : `±${fmtOdd(S.tol)}`;
   let note = '';
   if (st.n && st.iyN < st.n) note += ` · <span class="warn">${t('noHtScores', { n: fmtInt(st.n - st.iyN), m: fmtInt(st.iyN) })}</span>`;
-  if (st.n < 30) note += ` · <span class="warn">${t('smallSample')}</span>`;
+  if (st.n < MIN_MATCHES) note += ` · <span class="warn">${t('smallSample')}</span>`;
   const leaguesTxt = S.lgSel.size ? t('nLeagues', { n: S.lgSel.size }) : t('allLeagues').toLocaleLowerCase(LOC());
   $('crit').innerHTML = `<b>${t('oddsLabel')}</b> ${target.map(fmtOdd).join(' / ')} (${t('margin', { p: fmtPct(margin) })}) · ${tolTxt}<br>` +
     `${t('rangeText_' + S.range)} · ${leaguesTxt}${st.n ? ' · ' + t('avgGoals', { g: fmtNum(st.goals / st.n, 2) }) : ''}${note}`;
@@ -539,7 +563,7 @@ function renderResults() {
   cards.push(card(t('cardOU15'), st.n, [[t('under'), st.o15.under], [t('over'), st.o15.over]]));
   cards.push(card(t('cardOU35'), st.n, [[t('under'), st.o35.under], [t('over'), st.o35.over]]));
   cards.push(card(t('cardGoals'), st.n, Object.entries(st.tg)));
-  let htft = `<div class="na">${t('noDataCard')}</div>`;
+  let htft = `<div class="na">${t('noDataCard')}</div>`, htftHot = '';
   if (st.iyN) {
     const max = Math.max(...Object.values(st.htft));
     htft = `<table class="htft"><tr><th>${t('htftCorner')}</th><th>1</th><th>${X}</th><th>2</th></tr>`;
@@ -547,13 +571,15 @@ function renderResults() {
       htft += `<tr><th>${drawLabel(a)}</th>`;
       for (const b of ['1', '0', '2']) {
         const n = st.htft[a + '/' + b] || 0; const p = n / st.iyN;
-        htft += `<td class="${n === max ? 'top' : ''}" style="background:color-mix(in srgb, var(--accent) ${Math.round(p * 70)}%, transparent)"><b>${drawLabel(a)}/${drawLabel(b)}</b><small>${fmtInt(n)} · ${fmtPct(p)}</small></td>`;
+        const hot = isHot(p, st.iyN);
+        if (hot) htftHot = ' hot';
+        htft += `<td class="${n === max ? 'top' : ''}${hot ? ' hot' : ''}" style="background:color-mix(in srgb, var(--accent) ${Math.round(p * 70)}%, transparent)"><b>${drawLabel(a)}/${drawLabel(b)}</b><small>${fmtInt(n)} · ${fmtPct(p)}</small></td>`;
       }
       htft += '</tr>';
     }
     htft += '</table>';
   }
-  cards.push(`<div class="card wide"><h3>${t('cardHTFT')}<small>${t('nMatches', { n: fmtInt(st.iyN) })}</small></h3>${htft}</div>`);
+  cards.push(`<div class="card wide${htftHot}"><h3>${t('cardHTFT')}<small>${t('nMatches', { n: fmtInt(st.iyN) })}</small></h3>${htft}</div>`);
   $('cards').innerHTML = cards.join('');
   renderList();
 }
@@ -694,9 +720,10 @@ function openReelDialog() {
   }
   $('reelStatus').hidden = true; $('reelResult').hidden = true;
   const n = S.last?.set.length || 0;
-  $('reelPhase').textContent = n < 30 ? t('reelSmall', { n }) : '';
-  $('reelStatus').hidden = n >= 30;
+  $('reelPhase').textContent = n < MIN_MATCHES ? t('reelSmall', { n, m: MIN_MATCHES }) : '';
+  $('reelStatus').hidden = n >= MIN_MATCHES;
   $('reelStatus').querySelector('.reel-bar').hidden = true;
+  $('reelGo').disabled = n < MIN_MATCHES;
   $('dlgReel').showModal();
 }
 
@@ -735,10 +762,12 @@ function reelPropsNow() {
     ht: iy ? [st.iy[1] / iy, st.iy[0] / iy, st.iy[2] / iy] : [0, 0, 0], htN: iy,
     btts: st.kg.yes / n, ou15: st.o15.over / n, ou25: st.o25.over / n, ou35: st.o35.over / n,
     avgGoals: st.goals / n, htft,
+    hot: outcomes(st).sort((a, b) => b.p - a.p).slice(0, 4),
   };
 }
 
 async function createReel() {
+  if ((S.last?.set.length || 0) < MIN_MATCHES) return;
   if (!$('reelHome').value.trim() || !$('reelAway').value.trim()) { $('reelStatus').hidden = false; $('reelPhase').textContent = t('reelNeedTeams'); return; }
   const go = $('reelGo'); const bar = $('reelStatus').querySelector('.reel-bar');
   go.disabled = true; go.textContent = t('reelCreating');
@@ -778,6 +807,7 @@ async function createReel() {
 
 // Web mode: open a pre-filled GitHub issue; the "Make reel" workflow renders the video and replies with a link.
 function createReelOnGitHub() {
+  if ((S.last?.set.length || 0) < MIN_MATCHES) return;
   if (!$('reelHome').value.trim() || !$('reelAway').value.trim()) { $('reelStatus').hidden = false; $('reelPhase').textContent = t('reelNeedTeams'); return; }
   const all = REEL_LANGS.map(buildReelProps);
   const p = all[0], m = p.match;

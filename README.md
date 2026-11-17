@@ -27,6 +27,9 @@ Only bwin's 1X2 odds are used for matching. All other markets are derived from t
 - Filters: date range (last month … last 5 years, or all) and league.
 - The full-time result card shows the probability implied by the entered odds (bwin margin removed) next to the
   historical frequency, together with the difference.
+- Outcomes that happened in **more than 75 %** of the matching matches are framed in red (`HOT` in
+  [`public/app.js`](public/app.js)), but only when at least 30 matches match (`MIN_MATCHES`): fewer is not a fair
+  comparison, so the page shows a small-sample warning instead.
 
 ## Running it
 
@@ -76,7 +79,10 @@ A **Create Reels video** button next to the results turns the current analysis i
 with background music: one in **English** for [@oddsmemory](https://www.instagram.com/oddsmemory/) and one in
 **Turkish** for [@oranhafizasi](https://www.instagram.com/oranhafizasi/). Each language has its own account name and
 logo; the numbers are the same. The video has six scenes: hook, odds and number of matches, full-time result, goals,
-top HT/FT outcomes, and a closing scene (call to comment, follow reminder, disclaimer).
+top HT/FT outcomes, and a closing scene (call to comment, follow reminder, disclaimer). When some outcomes are above
+75 % (the red-framed ones on the page), a five-second scene listing up to four of them, framed in red, comes before
+the closing scene, and the video is 35 seconds long. Videos need at least 30 matching matches: below that, the page
+does not create them and [`reelrender.js`](reelrender.js) rejects the request.
 
 - **Local page:** the videos are rendered on your computer and saved in `reels/out/` as
   `<date>_<home>-<away>_<en|tr>.mp4`.

@@ -20,6 +20,7 @@ const REELS_DIR = path.join(__dirname, 'reels');
 const ENGINE = process.env.ODDS_REELS_ENGINE || path.join(os.homedir(), '.odds-analysis', 'reels-engine');
 const MUSIC_DIR = process.env.ODDS_MUSIC_DIR || path.join(__dirname, 'music');
 const LANGS = ['en', 'tr'];
+const MIN_MATCHES = 30; // fewer matching matches is not a fair comparison: no reel (same limit as MIN_MATCHES in public/app.js)
 
 function run(cmd, args, cwd, onOutput) {
   return new Promise((resolve, reject) => {
@@ -89,15 +90,19 @@ function validateProps(p) {
     ft: p.ft, implied: p.implied, ht: p.ht, htN: p.htN,
     btts: p.btts, ou15: p.ou15, ou25: p.ou25, ou35: p.ou35, avgGoals: p.avgGoals,
     htft: Array.isArray(p.htft) ? p.htft.slice(0, 3).map((x) => ({ k: String(x && x.k), p: x && x.p })) : [],
+    // outcomes above 75 % – shown in their own scene when present
+    hot: Array.isArray(p.hot) ? p.hot.slice(0, 4).map((x) => ({ title: str(x && x.title, 40), pick: str(x && x.pick, 20), p: x && x.p })) : [],
   };
   if (!out.match.home || !out.match.away) errors.push('home and away team names are required');
   if (!(Array.isArray(out.odds) && out.odds.length === 3 && out.odds.every((x) => numIn(x, 1.01, 1000)))) errors.push('odds must be three numbers above 1');
   if (!(Number.isInteger(out.n) && out.n > 0 && out.n < 1e6)) errors.push('n (number of matching matches) must be a positive integer');
+  else if (out.n < MIN_MATCHES) errors.push(`only ${out.n} matching matches; at least ${MIN_MATCHES} are needed for a fair comparison`);
   if (!(Number.isInteger(out.htN) && out.htN >= 0 && out.htN <= out.n)) errors.push('htN is invalid');
   for (const k of ['ft', 'implied', 'ht']) if (!fracs(out[k], 3)) errors.push(`${k} must be three fractions`);
   for (const k of ['btts', 'ou15', 'ou25', 'ou35']) if (!numIn(out[k], 0, 1)) errors.push(`${k} must be a fraction`);
   if (!numIn(out.avgGoals, 0, 20)) errors.push('avgGoals is invalid');
   if (!out.htft.every((x) => /^[012]\/[012]$/.test(x.k) && numIn(x.p, 0, 1))) errors.push('htft entries are invalid');
+  if (!out.hot.every((x) => x.title && x.pick && numIn(x.p, 0, 1))) errors.push('hot entries are invalid');
   if (errors.length) throw new Error('Invalid reel data: ' + errors.join('; '));
   return out;
 }

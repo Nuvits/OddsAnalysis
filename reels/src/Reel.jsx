@@ -9,7 +9,8 @@ const DISPLAY = loadDisplay('normal', { weights: ['600', '700', '800'], subsets:
 const BODY = loadBody('normal', { weights: ['400', '500', '600', '700'], subsets: ['latin', 'latin-ext'] }).fontFamily;
 
 export const FPS = 30;
-// Scene lengths in frames (30 fps): 3 + 5 + 6 + 6 + 5 + 5 = 30 seconds
+// Scene lengths in frames (30 fps): 3 + 5 + 6 + 6 + 5 + 5 = 30 seconds.
+// When some outcomes are above 75 % (props.hot), a 5-second scene listing them comes before the outro (35 seconds).
 const SCENES = [
   { id: 'hook', len: 90 },
   { id: 'odds', len: 150 },
@@ -18,7 +19,9 @@ const SCENES = [
   { id: 'htft', len: 150 },
   { id: 'outro', len: 150 },
 ];
-export const TOTAL_FRAMES = SCENES.reduce((s, x) => s + x.len, 0);
+const HOT_SCENE = { id: 'hot', len: 150 };
+export const scenesFor = (p) => (p && p.hot && p.hot.length ? [...SCENES.slice(0, -1), HOT_SCENE, SCENES[SCENES.length - 1]] : SCENES);
+export const totalFrames = (p) => scenesFor(p).reduce((s, x) => s + x.len, 0);
 
 const COLOR = {
   bg1: '#04100b',
@@ -30,6 +33,8 @@ const COLOR = {
   accent: '#3fd38a',
   accentSoft: 'rgba(63,211,138,0.22)',
   bar: 'rgba(255,255,255,0.22)',
+  hot: '#ff5a5a',
+  hotSoft: 'rgba(255,90,90,0.12)',
 };
 
 // One Instagram account (and logo) per language
@@ -45,6 +50,7 @@ const TEXT = {
     impliedTitle: 'Oranın ima ettiği', goalsTitle: 'Goller', btts: 'KG Var', over25: '2,5 Üst', over15: '1,5 Üst', over35: '3,5 Üst',
     avg: 'Maç başı ort.', goalsUnit: 'gol', htftTitle: 'İY / MS', htftSub: 'En sık 3 sonuç',
     htftHow: 'Örnek: 0/1 = ilk yarı berabere, maçı ev sahibi kazandı',
+    hotTitle: '%75 üzeri', hotSub: 'Bu oranlarda en güçlü sonuçlar',
     outro1: 'Sence skor', outro2: 'ne olur?', comment: 'Tahminini yorumlara yaz',
     disclaimer: 'Bahis tavsiyesi değildir. Geçmiş sonuçlar istatistiktir, kesinlik değildir. 18+',
     follow: 'Daha fazla analiz için takip etmeyi unutma', draw: '0',
@@ -56,6 +62,7 @@ const TEXT = {
     impliedTitle: 'Implied by the odds', goalsTitle: 'Goals', btts: 'BTTS', over25: 'Over 2.5', over15: 'Over 1.5', over35: 'Over 3.5',
     avg: 'Avg. per match', goalsUnit: 'goals', htftTitle: 'HT / FT', htftSub: 'Top 3 outcomes',
     htftHow: 'Example: X/1 = draw at half-time, home team won',
+    hotTitle: 'Above 75%', hotSub: 'The strongest outcomes at these odds',
     outro1: 'What will', outro2: 'the score be?', comment: 'Drop your prediction below',
     disclaimer: 'Not betting advice. Past results are statistics, not certainties. 18+',
     follow: "Don't forget to follow for more analysis", draw: 'X',
@@ -113,13 +120,13 @@ const Background = () => {
 };
 
 // Story-style segment bar at the top
-const ProgressBar = () => {
+const ProgressBar = ({ scenes }) => {
   const frame = useCurrentFrame();
   let start = 0;
   return (
     // Placed below Instagram's top bar ("Reels" title, camera icon), which covers roughly the top 180 px
     <div style={{ position: 'absolute', top: 200, left: 80, right: 130, display: 'flex', gap: 12 }}>
-      {SCENES.map((s) => {
+      {scenes.map((s) => {
         const p = Math.min(1, Math.max(0, (frame - start) / s.len));
         start += s.len;
         return (
@@ -341,6 +348,35 @@ const HtftScene = ({ p, t, len }) => {
   );
 };
 
+// Outcomes above 75 %, framed in red like on the website
+const HotScene = ({ p, t, len }) => {
+  const frame = useCurrentFrame();
+  return (
+    <Scene len={len}>
+      <Title sub={t.hotSub}>{t.hotTitle}</Title>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 30 }}>
+        {p.hot.map((x, i) => {
+          const d = 12 + i * 12;
+          const v = interpolate(frame, [d, d + 36], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) });
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 30, padding: '26px 40px', borderRadius: 28,
+              background: COLOR.hotSoft, border: `5px solid ${COLOR.hot}`, boxShadow: `0 0 40px rgba(255,90,90,${0.25 * v})`,
+              opacity: Math.min(1, v * 1.5), transform: `translateX(${(1 - v) * 80}px)`,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 34, color: COLOR.muted, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.title}</div>
+                <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 84, lineHeight: 1.05 }}>{x.pick}</div>
+              </div>
+              <div style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 120, lineHeight: 1, color: COLOR.hot }}>{pct(x.p * v, p.lang)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </Scene>
+  );
+};
+
 const OutroScene = ({ p, t, len }) => {
   const a = useIn(0), b = useIn(14), c = useIn(30);
   return (
@@ -364,7 +400,7 @@ const OutroScene = ({ p, t, len }) => {
   );
 };
 
-const SCENE_COMPONENTS = { hook: HookScene, odds: OddsScene, ft: FtScene, goals: GoalsScene, htft: HtftScene, outro: OutroScene };
+const SCENE_COMPONENTS = { hook: HookScene, odds: OddsScene, ft: FtScene, goals: GoalsScene, htft: HtftScene, hot: HotScene, outro: OutroScene };
 
 // Background music: fades in over half a second and out over the last 1.5 seconds
 const Music = ({ file }) => {
@@ -379,12 +415,13 @@ const Music = ({ file }) => {
 
 export const Reel = (props) => {
   const t = TEXT[props.lang] || TEXT.en;
+  const scenes = scenesFor(props);
   let from = 0;
   return (
     <AbsoluteFill style={{ backgroundColor: COLOR.bg1 }}>
       {props.music && <Music file={props.music} />}
       <Background />
-      {SCENES.map((s) => {
+      {scenes.map((s) => {
         const C = SCENE_COMPONENTS[s.id];
         const el = (
           <Sequence key={s.id} from={from} durationInFrames={s.len} name={s.id}>
@@ -394,7 +431,7 @@ export const Reel = (props) => {
         from += s.len;
         return el;
       })}
-      <ProgressBar />
+      <ProgressBar scenes={scenes} />
       <BrandTag brand={props.brand} logo={LOGOS[props.lang] || LOGOS.en} />
     </AbsoluteFill>
   );
