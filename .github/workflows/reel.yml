@@ -1,14 +1,14 @@
 name: Make reel
 
-# The site's "Create reel" button opens a pre-filled issue titled "Reel: …" with the analysis as JSON.
-# This workflow renders the 30-second video, attaches it to a release and replies on the issue with the link.
-# Only issues opened by the repository owner are processed.
+# The site's "Create reel" button opens a pre-filled issue titled "Reel: …" with the analysis as JSON
+# (one reel per language). This workflow renders the 30-second videos, attaches them to a release and replies
+# on the issue with the links. Only issues opened by the repository owner are processed.
 on:
   issues:
     types: [opened]
 
 permissions:
-  contents: write   # create the release that holds the video
+  contents: write   # create the release that holds the videos
   issues: write     # reply and close the issue
 
 concurrency:
@@ -22,8 +22,20 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       ISSUE: ${{ github.event.issue.number }}
+      # Optional: read-only deploy key of the private music repository <owner>/odds-memory-music (see README).
+      # Without it the videos are silent.
+      MUSIC_KEY: ${{ secrets.MUSIC_DEPLOY_KEY }}
     steps:
       - uses: actions/checkout@v5
+
+      - name: Get the background music
+        if: env.MUSIC_KEY != ''
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ github.repository_owner }}/odds-memory-music
+          ssh-key: ${{ env.MUSIC_KEY }}
+          path: music
+          persist-credentials: false
 
       - uses: actions/setup-node@v5
         with:
@@ -40,26 +52,29 @@ jobs:
         id: props
         run: node .github/scripts/reel-from-issue.js
 
-      - name: Render the video
-        env:
-          FILE: ${{ steps.props.outputs.file }}
-        run: node reelrender.js reel-props.json "out/$FILE"
+      - name: Render the videos
+        run: node reelrender.js reel-props.json out
 
       - name: Publish and reply
         env:
-          FILE: ${{ steps.props.outputs.file }}
           TITLE: ${{ steps.props.outputs.title }}
         run: |
           TAG="reel-$ISSUE"
-          gh release create "$TAG" "out/$FILE" --title "Reel: $TITLE" \
-            --notes "30-second Instagram Reel (1080×1920, silent – add music in Instagram). Requested in #$ISSUE."
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$FILE"
-          gh issue comment "$ISSUE" --body "🎬 **Your reel is ready:** $URL
+          gh release create "$TAG" out/*.mp4 --title "Reel: $TITLE" \
+            --notes "30-second Instagram Reels (1080×1920). Requested in #$ISSUE."
+          BODY="🎬 **Your reels are ready:**"
+          for f in out/*.mp4; do
+            NAME=$(basename "$f")
+            case "$NAME" in *_tr.mp4) LANG_NAME="Turkish" ;; *) LANG_NAME="English" ;; esac
+            BODY="$BODY
+          - $LANG_NAME: https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/$NAME"
+          done
+          gh issue comment "$ISSUE" --body "$BODY
 
-          Tap the link to download the MP4, then post it on Instagram and add music there."
+          Tap a link to download the MP4, then post it on the matching Instagram account."
           gh issue close "$ISSUE"
 
       - name: Report a failure
         if: failure()
         run: |
-          gh issue comment "$ISSUE" --body "⚠️ The reel could not be created. Details: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          gh issue comment "$ISSUE" --body "⚠️ The reels could not be created. Details: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"

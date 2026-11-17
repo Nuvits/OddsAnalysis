@@ -231,15 +231,15 @@ function importText(text) {
 }
 
 // ---------- Instagram Reels rendering (see reelrender.js) ----------
-let reelJob = { running: false, phase: "", done: 0, total: 0, file: null, error: null };
+// One request = one reel per language (English and Turkish), rendered one after the other.
+let reelJob = { running: false, phase: "", done: 0, total: 0, step: 0, steps: 0, lang: "", files: [], error: null };
 
-async function startReel(rawProps) {
+async function startReel(raw) {
   if (reelJob.running) throw new Error("A reel is already being rendered");
-  const props = reels.validateProps(rawProps); // throws on bad input before the job starts
-  reelJob = { running: true, phase: "preparing", done: 0, total: 0, file: null, error: null };
-  const name = reels.fileNameFor(props);
-  reels.renderReel(props, path.join(REELS_OUT, name), (p) => Object.assign(reelJob, p))
-    .then(() => { reelJob.file = name; console.log(`Reel saved: reels/out/${name}`); })
+  const list = reels.validateRequest(raw); // throws on bad input before the job starts
+  reelJob = { running: true, phase: "preparing", done: 0, total: 0, step: 1, steps: list.length, lang: list[0].lang, files: [], error: null };
+  reels.renderReels(list, REELS_OUT, (p) => Object.assign(reelJob, p))
+    .then((files) => { reelJob.files = files; files.forEach((f) => console.log(`Reel saved: reels/out/${f}`)); })
     .catch((e) => { reelJob.error = e.message; console.error("Reel rendering failed:", e.message); })
     .finally(() => { reelJob.running = false; });
 }

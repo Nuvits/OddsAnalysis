@@ -12,3 +12,7 @@ eski-iddaa/
 # Rendered Reels videos
 reels/out/
 reels/node_modules/
+
+# Background music (licensed tracks must not be redistributed as files) and logo originals
+music/
+PP/

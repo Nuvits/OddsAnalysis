@@ -95,17 +95,18 @@ const I18N = {
     importedToast: 'İçe aktarıldı: {added} yeni, {updated} güncellendi, {unchanged} zaten vardı{invalid}. Toplam {total}.', invalidRows: ', {n} geçersiz satır',
     // reels
     makeReel: 'Reels videosu oluştur', reelTitle: 'Reels videosu oluştur',
-    reelHint: 'Şu anki analiz (oranlar, filtreler, eşleşen maçlar) 30 saniyelik, 1080×1920 boyutunda sessiz bir Reels videosuna dönüşür. İlk seferde video motoru kurulur; bu birkaç dakika sürebilir.',
+    reelHint: 'Şu anki analiz (oranlar, filtreler, eşleşen maçlar) 30 saniyelik, 1080×1920 boyutunda, müzikli iki Reels videosuna dönüşür: biri İngilizce, biri Türkçe. İlk seferde video motoru kurulur; bu birkaç dakika sürebilir.',
     reelHome: 'Ev sahibi', reelAway: 'Deplasman', reelLeague: 'Lig', reelDate: 'Tarih', reelTime: 'Saat',
     reelCreate: 'Oluştur', reelCreating: 'Oluşturuluyor…',
     reelPhase_preparing: 'Hazırlanıyor…', reelPhase_installing: 'Video motoru kuruluyor (yalnızca ilk sefer, birkaç dakika)…',
     reelPhase_rendering: 'Kareler çiziliyor: {d}/{t}', reelPhase_encoding: 'Video kodlanıyor: {d}/{t}',
-    reelSaved: 'Kaydedildi: <b>reels/out/{name}</b>. Klasör Google Drive ile telefonunuza da gelir. Müziği Instagram\'da ekleyin.',
+    reelSaved: 'reels/out klasörüne kaydedildi: <b>{names}</b>. Klasör Google Drive ile telefonunuza da gelir.',
+    reelLang_en: 'İngilizce', reelLang_tr: 'Türkçe', reelStep: '{lang} video ({s}/{n})',
     reelNeedTeams: 'Ev sahibi ve deplasman adını yazın.', reelFailed: 'Video oluşturulamadı: {e}',
     reelSmall: 'Dikkat: yalnızca {n} eşleşen maç var, yüzdeler güvenilir olmayabilir.',
-    reelHintWeb: 'Bu sitede video GitHub\'da üretilir. “GitHub\'da devam et” bilgileri dolu bir GitHub sayfası açar; orada “Submit new issue” deyin. 2-4 dakika içinde aynı sayfaya video bağlantısı gelir. GitHub hesabınızla giriş yapmış olmanız gerekir.',
+    reelHintWeb: 'Bu sitede videolar (İngilizce ve Türkçe) GitHub\'da üretilir. “GitHub\'da devam et” bilgileri dolu bir GitHub sayfası açar; orada “Submit new issue” deyin. 4-6 dakika içinde aynı sayfaya video bağlantıları gelir. GitHub hesabınızla giriş yapmış olmanız gerekir.',
     reelGoWeb: 'GitHub\'da devam et',
-    reelOpened: 'GitHub yeni sekmede açıldı. “Submit new issue” deyin; video bağlantısı 2-4 dakika içinde o sayfada görünür.',
+    reelOpened: 'GitHub yeni sekmede açıldı. “Submit new issue” deyin; video bağlantıları 4-6 dakika içinde o sayfada görünür.',
   },
   en: {
     appName: 'Odds Memory', title: 'Odds Memory',
@@ -160,17 +161,18 @@ const I18N = {
     fileChosen: '<b>{name}</b> selected ({mb} MB).',
     importedToast: 'Imported: {added} new, {updated} updated, {unchanged} already present{invalid}. {total} in total.', invalidRows: ', {n} invalid rows',
     makeReel: 'Create Reels video', reelTitle: 'Create Reels video',
-    reelHint: 'Turns the current analysis (odds, filters, matching matches) into a silent 30-second 1080×1920 Reels video. The first time, the video engine is installed, which can take a few minutes.',
+    reelHint: 'Turns the current analysis (odds, filters, matching matches) into two 30-second 1080×1920 Reels videos with music: one in English, one in Turkish. The first time, the video engine is installed, which can take a few minutes.',
     reelHome: 'Home team', reelAway: 'Away team', reelLeague: 'League', reelDate: 'Date', reelTime: 'Time',
     reelCreate: 'Create', reelCreating: 'Creating…',
     reelPhase_preparing: 'Preparing…', reelPhase_installing: 'Installing the video engine (first time only, a few minutes)…',
     reelPhase_rendering: 'Rendering frames: {d}/{t}', reelPhase_encoding: 'Encoding video: {d}/{t}',
-    reelSaved: 'Saved: <b>reels/out/{name}</b>. The folder syncs to your phone via Google Drive. Add music in Instagram.',
+    reelSaved: 'Saved in reels/out: <b>{names}</b>. The folder syncs to your phone via Google Drive.',
+    reelLang_en: 'English', reelLang_tr: 'Turkish', reelStep: '{lang} video ({s}/{n})',
     reelNeedTeams: 'Enter the home and away team names.', reelFailed: 'Could not create the video: {e}',
     reelSmall: 'Note: only {n} matching matches, so the percentages may be unreliable.',
-    reelHintWeb: 'On this site the video is made on GitHub. “Continue on GitHub” opens a pre-filled GitHub page; tap “Submit new issue” there. A link to the video appears on that page in 2–4 minutes. You need to be signed in to GitHub.',
+    reelHintWeb: 'On this site the videos (English and Turkish) are made on GitHub. “Continue on GitHub” opens a pre-filled GitHub page; tap “Submit new issue” there. Links to the videos appear on that page in 4–6 minutes. You need to be signed in to GitHub.',
     reelGoWeb: 'Continue on GitHub',
-    reelOpened: 'GitHub opened in a new tab. Tap “Submit new issue”; the video link appears there in 2–4 minutes.',
+    reelOpened: 'GitHub opened in a new tab. Tap “Submit new issue”; the video links appear there in 4–6 minutes.',
   },
 };
 
@@ -698,7 +700,26 @@ function openReelDialog() {
   $('dlgReel').showModal();
 }
 
-function buildReelProps() {
+// The reel is made in every language of REEL_LANGS (one Instagram account each), whatever the page language is.
+const REEL_LANGS = ['en', 'tr'];
+
+// League typed in the dialog → the same league in another language (free text is kept as typed)
+function reelLeagueIn(lang) {
+  const v = $('reelLeague').value.trim();
+  for (const names of Object.values(LEAGUE_NAMES)) {
+    const code = Object.keys(names).find((c) => names[c] === v);
+    if (code) return LEAGUE_NAMES[lang][code];
+  }
+  return v;
+}
+
+function buildReelProps(lang) {
+  const saved = LANG;
+  LANG = lang; // t(), fmtOdd() and fmtDate() follow LANG
+  try { return reelPropsNow(); } finally { LANG = saved; }
+}
+
+function reelPropsNow() {
   const { set, t: target } = S.last;
   const st = computeStats(set);
   const n = st.n, iy = st.iyN;
@@ -707,7 +728,7 @@ function buildReelProps() {
   const leaguesTxt = S.lgSel.size ? t('nLeagues', { n: S.lgSel.size }) : t('allLeagues').toLocaleLowerCase(LOC());
   return {
     lang: LANG,
-    match: { home: $('reelHome').value.trim(), away: $('reelAway').value.trim(), league: $('reelLeague').value.trim(), date: fmtDate(dateIso), dateIso, time: $('reelTime').value },
+    match: { home: $('reelHome').value.trim(), away: $('reelAway').value.trim(), league: reelLeagueIn(LANG), date: fmtDate(dateIso), dateIso, time: $('reelTime').value },
     odds: target, n, exact: S.mode === 'exact', tolText: `±${fmtOdd(S.tol)}`,
     filterText: `${t('rangeText_' + S.range)} · ${leaguesTxt}`,
     ft: [st.ms[1] / n, st.ms[0] / n, st.ms[2] / n], implied: implied(target),
@@ -723,21 +744,25 @@ async function createReel() {
   go.disabled = true; go.textContent = t('reelCreating');
   $('reelResult').hidden = true; $('reelStatus').hidden = false; bar.hidden = false; bar.firstElementChild.style.width = '0%';
   try {
-    await api('/api/reel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildReelProps()) });
+    await api('/api/reel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(REEL_LANGS.map(buildReelProps)) });
     for (;;) {
       const j = await api('/api/reel');
       const frac = j.total ? j.done / j.total : 0;
       // rendering = first 85 %, encoding = the rest
       bar.firstElementChild.style.width = Math.round((j.phase === 'encoding' ? 0.85 + 0.15 * frac : 0.85 * frac) * 100) + '%';
       const phase = (j.phase === 'rendering' || j.phase === 'encoding') && !j.total ? 'preparing' : j.phase; // bundling: no frame counts yet
-      $('reelPhase').textContent = t('reelPhase_' + (phase in { preparing: 1, installing: 1, rendering: 1, encoding: 1 } ? phase : 'preparing'), { d: j.done, t: j.total });
+      const step = j.steps > 1 ? t('reelStep', { lang: t('reelLang_' + j.lang), s: j.step, n: j.steps }) + ' · ' : '';
+      $('reelPhase').textContent = step + t('reelPhase_' + (phase in { preparing: 1, installing: 1, rendering: 1, encoding: 1 } ? phase : 'preparing'), { d: j.done, t: j.total });
       if (!j.running) {
         if (j.error) throw new Error(j.error);
-        if (j.file) {
+        if (j.files && j.files.length) {
           bar.firstElementChild.style.width = '100%';
           $('reelPhase').textContent = '';
-          $('reelVideo').src = `/api/reel/file?name=${encodeURIComponent(j.file)}&v=${Date.now()}`;
-          $('reelSaved').innerHTML = t('reelSaved', { name: esc(j.file) });
+          $('reelVideos').innerHTML = j.files.map((f) => {
+            const lang = (/_([a-z]{2})\.mp4$/.exec(f) || [])[1];
+            return `<figure><figcaption>${esc(lang ? t('reelLang_' + lang) : '')}</figcaption><video controls playsinline preload="metadata" src="/api/reel/file?name=${encodeURIComponent(f)}&v=${Date.now()}"></video></figure>`;
+          }).join('');
+          $('reelSaved').innerHTML = t('reelSaved', { names: j.files.map(esc).join(', ') });
           $('reelResult').hidden = false;
         }
         break;
@@ -754,11 +779,11 @@ async function createReel() {
 // Web mode: open a pre-filled GitHub issue; the "Make reel" workflow renders the video and replies with a link.
 function createReelOnGitHub() {
   if (!$('reelHome').value.trim() || !$('reelAway').value.trim()) { $('reelStatus').hidden = false; $('reelPhase').textContent = t('reelNeedTeams'); return; }
-  const p = buildReelProps();
-  const m = p.match;
+  const all = REEL_LANGS.map(buildReelProps);
+  const p = all[0], m = p.match;
   const odds = p.odds.map((o) => o.toFixed(2)).join(' / ');
   const body = [
-    'Reel request from Odds Memory – submit this issue to create the video.',
+    'Reel request from Odds Memory – submit this issue to create the videos (English and Turkish).',
     '',
     '| | |', '|---|---|',
     `| Match | ${m.home} – ${m.away} |`,
@@ -766,10 +791,10 @@ function createReelOnGitHub() {
     `| bwin odds (1 / X / 2) | ${odds} |`,
     `| Matching | ${p.n} matches · ${p.exact ? 'exact odds' : p.tolText} · ${p.filterText} |`,
     '',
-    'The video link will be posted here in 2–4 minutes.',
+    'The video links will be posted here in 4–6 minutes.',
     '',
     '<!-- Data for the video – please do not edit. -->',
-    '```json', JSON.stringify(p), '```',
+    '```json', JSON.stringify(all), '```',
   ].join('\n');
   const url = `https://github.com/${REEL_REPO}/issues/new?title=${encodeURIComponent(`Reel: ${m.home} – ${m.away}`)}&body=${encodeURIComponent(body)}`;
   window.open(url, '_blank', 'noopener');

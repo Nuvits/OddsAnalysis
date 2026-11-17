@@ -1,4 +1,4 @@
 {
-  "name": "Odds Memory",
-  "handle": "oddsmemory"
+  "en": { "name": "Odds Memory", "handle": "oddsmemory" },
+  "tr": { "name": "Oran Hafızası", "handle": "oranhafizasi" }
 }

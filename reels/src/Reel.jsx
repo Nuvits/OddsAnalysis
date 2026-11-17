@@ -1,6 +1,7 @@
 import React from 'react';
-import { AbsoluteFill, Img, Sequence, interpolate, spring, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
-import logo from './logo.jpg';
+import { AbsoluteFill, Audio, Img, Sequence, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig, Easing } from 'remotion';
+import logoEn from './logo-en.jpg';
+import logoTr from './logo-tr.jpg';
 import { loadFont as loadDisplay } from '@remotion/google-fonts/BarlowCondensed';
 import { loadFont as loadBody } from '@remotion/google-fonts/Inter';
 
@@ -30,6 +31,10 @@ const COLOR = {
   accentSoft: 'rgba(63,211,138,0.22)',
   bar: 'rgba(255,255,255,0.22)',
 };
+
+// One Instagram account (and logo) per language
+const LOGOS = { en: logoEn, tr: logoTr };
+const MUSIC_VOLUME = 0.7;
 
 // ---------- Texts ----------
 const TEXT = {
@@ -128,15 +133,15 @@ const ProgressBar = () => {
 };
 
 // The logo is a round badge on a white square: scale it up inside a circle so the white corners are cut off.
-const Logo = ({ size }) => (
+const Logo = ({ size, src }) => (
   <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', flex: 'none', boxShadow: '0 6px 20px rgba(0,0,0,0.4)' }}>
-    <Img src={logo} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.16)' }} />
+    <Img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.16)' }} />
   </div>
 );
 
-const BrandTag = ({ brand }) => (
+const BrandTag = ({ brand, logo }) => (
   <div style={{ position: 'absolute', top: 232, left: 80, display: 'flex', alignItems: 'center', gap: 16, fontFamily: BODY, fontWeight: 700, fontSize: 32, color: COLOR.text, letterSpacing: 0.5 }}>
-    <Logo size={64} />
+    <Logo size={64} src={logo} />
     <span>{brand.handle ? `@${brand.handle.replace(/^@/, '')}` : brand.name}</span>
   </div>
 );
@@ -347,7 +352,7 @@ const OutroScene = ({ p, t, len }) => {
       </div>
       <div style={{ opacity: c, borderTop: `2px solid ${COLOR.cardLine}`, paddingTop: 36 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-          <Logo size={150} />
+          <Logo size={150} src={LOGOS[p.lang] || LOGOS.en} />
           <div>
             <div style={{ fontSize: 50, fontWeight: 700 }}>{p.brand.handle ? `@${p.brand.handle.replace(/^@/, '')}` : p.brand.name}</div>
             <div style={{ fontSize: 34, color: COLOR.accent, fontWeight: 600, marginTop: 8 }}>{t.follow}</div>
@@ -361,11 +366,23 @@ const OutroScene = ({ p, t, len }) => {
 
 const SCENE_COMPONENTS = { hook: HookScene, odds: OddsScene, ft: FtScene, goals: GoalsScene, htft: HtftScene, outro: OutroScene };
 
+// Background music: fades in over half a second and out over the last 1.5 seconds
+const Music = ({ file }) => {
+  const { durationInFrames, fps } = useVideoConfig();
+  return (
+    <Audio
+      src={staticFile(file)}
+      volume={(f) => interpolate(f, [0, fps / 2, durationInFrames - fps * 1.5, durationInFrames], [0, MUSIC_VOLUME, MUSIC_VOLUME, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })}
+    />
+  );
+};
+
 export const Reel = (props) => {
   const t = TEXT[props.lang] || TEXT.en;
   let from = 0;
   return (
     <AbsoluteFill style={{ backgroundColor: COLOR.bg1 }}>
+      {props.music && <Music file={props.music} />}
       <Background />
       {SCENES.map((s) => {
         const C = SCENE_COMPONENTS[s.id];
@@ -378,7 +395,7 @@ export const Reel = (props) => {
         return el;
       })}
       <ProgressBar />
-      <BrandTag brand={props.brand} />
+      <BrandTag brand={props.brand} logo={LOGOS[props.lang] || LOGOS.en} />
     </AbsoluteFill>
   );
 };

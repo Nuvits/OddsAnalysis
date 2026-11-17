@@ -1,7 +1,12 @@
 'use strict';
 // Renders an Instagram Reel (Remotion template in ./reels) from analysis numbers.
 // Used by server.js (local "Create Reels video" button) and by the "Make reel" GitHub workflow.
-// CLI: node reelrender.js <props.json> <output.mp4>
+// CLI: node reelrender.js <props.json> <output-folder>
+//   props.json holds one reel or an array of reels (one per language, e.g. English and Turkish).
+//
+// Branding (name, Instagram handle) per language comes from reels/brand.json; the logos are reels/src/logo-<lang>.jpg.
+// Background music: a track from ./music (ODDS_MUSIC_DIR) is mixed in. With several tracks, the match decides which one,
+// so the language versions of one match share a track. Without any track the video is silent.
 //
 // Remotion is installed outside the project (ODDS_REELS_ENGINE, default ~/.odds-analysis/reels-engine)
 // because node_modules does not work on synced drives such as Google Drive.
@@ -13,6 +18,8 @@ const { spawn } = require('child_process');
 
 const REELS_DIR = path.join(__dirname, 'reels');
 const ENGINE = process.env.ODDS_REELS_ENGINE || path.join(os.homedir(), '.odds-analysis', 'reels-engine');
+const MUSIC_DIR = process.env.ODDS_MUSIC_DIR || path.join(__dirname, 'music');
+const LANGS = ['en', 'tr'];
 
 function run(cmd, args, cwd, onOutput) {
   return new Promise((resolve, reject) => {
@@ -40,8 +47,27 @@ async function ensureEngine(onProgress) {
   fs.cpSync(path.join(REELS_DIR, 'src'), path.join(ENGINE, 'src'), { recursive: true });
 }
 
-function loadBrand() {
-  try { return JSON.parse(fs.readFileSync(path.join(REELS_DIR, 'brand.json'), 'utf8')); } catch { return {}; }
+const DEFAULT_BRAND = { en: { name: 'Odds Memory', handle: '' }, tr: { name: 'Oran Hafızası', handle: '' } };
+function loadBrand(lang) {
+  let b = {};
+  try { b = JSON.parse(fs.readFileSync(path.join(REELS_DIR, 'brand.json'), 'utf8')); } catch { /* defaults */ }
+  return { ...DEFAULT_BRAND[lang], ...(b[lang] || {}) };
+}
+
+// Picks a music track for the match (same match → same track) and copies it into the engine's public folder.
+function prepareMusic(props) {
+  const pub = path.join(ENGINE, 'public');
+  fs.rmSync(pub, { recursive: true, force: true });
+  let tracks = [];
+  try { tracks = fs.readdirSync(MUSIC_DIR).filter((f) => /\.(mp3|m4a|aac|wav|ogg)$/i.test(f)).sort(); } catch { /* no music folder */ }
+  if (!tracks.length) return null;
+  let h = 0;
+  for (const ch of `${props.match.home}|${props.match.away}|${props.match.dateIso}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const track = tracks[h % tracks.length];
+  const name = 'music' + path.extname(track).toLowerCase();
+  fs.mkdirSync(pub, { recursive: true });
+  fs.copyFileSync(path.join(MUSIC_DIR, track), path.join(pub, name));
+  return { file: name, track };
 }
 
 // ---------- Input checks: only known fields with sane values reach the template ----------
@@ -54,7 +80,7 @@ function validateProps(p) {
   if (!p || typeof p !== 'object') throw new Error('Reel data must be a JSON object');
   const m = p.match || {};
   const out = {
-    lang: p.lang === 'tr' ? 'tr' : 'en',
+    lang: LANGS.includes(p.lang) ? p.lang : 'en',
     match: {
       home: str(m.home, 40), away: str(m.away, 40), league: str(m.league, 50),
       date: str(m.date, 20), dateIso: /^\d{4}-\d{2}-\d{2}$/.test(m.dateIso || '') ? m.dateIso : '', time: /^\d{2}:\d{2}$/.test(m.time || '') ? m.time : '',
@@ -76,19 +102,28 @@ function validateProps(p) {
   return out;
 }
 
+// A request is one reel or a list of reels in different languages (at most one per language).
+function validateRequest(raw) {
+  const list = (Array.isArray(raw) ? raw : [raw]).map(validateProps);
+  if (!list.length || list.length > LANGS.length) throw new Error(`Invalid reel data: expected 1–${LANGS.length} reels`);
+  if (new Set(list.map((p) => p.lang)).size !== list.length) throw new Error('Invalid reel data: one reel per language');
+  return list;
+}
+
 const slug = (s) => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ı/g, 'i')
   .replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'match';
 
 function fileNameFor(props) {
-  return `${props.match.dateIso || new Date().toISOString().slice(0, 10)}_${slug(props.match.home)}-${slug(props.match.away)}.mp4`;
+  return `${props.match.dateIso || new Date().toISOString().slice(0, 10)}_${slug(props.match.home)}-${slug(props.match.away)}_${props.lang}.mp4`;
 }
 
 // Renders the reel to outFile. onProgress receives { phase, done, total }.
 async function renderReel(rawProps, outFile, onProgress = () => {}) {
   const props = validateProps(rawProps);
-  const full = { ...props, brand: { name: 'Odds Memory', handle: '', ...loadBrand() } };
   onProgress({ phase: 'preparing', done: 0, total: 0 });
   await ensureEngine(onProgress);
+  const music = prepareMusic(props);
+  const full = { ...props, brand: loadBrand(props.lang), music: music ? music.file : null };
   fs.writeFileSync(path.join(ENGINE, 'props.json'), JSON.stringify(full));
   fs.mkdirSync(path.join(ENGINE, 'out'), { recursive: true });
   const tmpOut = path.join('out', 'reel.mp4');
@@ -103,16 +138,28 @@ async function renderReel(rawProps, outFile, onProgress = () => {}) {
   return outFile;
 }
 
-module.exports = { renderReel, validateProps, fileNameFor, ENGINE };
+// Renders every reel of a request into outDir. onProgress also receives { step, steps, lang }.
+async function renderReels(raw, outDir, onProgress = () => {}) {
+  const list = validateRequest(raw);
+  const files = [];
+  for (let i = 0; i < list.length; i++) {
+    const name = fileNameFor(list[i]);
+    await renderReel(list[i], path.join(outDir, name), (p) => onProgress({ ...p, step: i + 1, steps: list.length, lang: list[i].lang }));
+    files.push(name);
+  }
+  return files;
+}
+
+module.exports = { renderReel, renderReels, validateProps, validateRequest, fileNameFor, ENGINE };
 
 if (require.main === module) {
-  const [propsFile, outFile] = process.argv.slice(2);
-  if (!propsFile || !outFile) { console.error('Usage: node reelrender.js <props.json> <output.mp4>'); process.exit(2); }
+  const [propsFile, outDir] = process.argv.slice(2);
+  if (!propsFile || !outDir) { console.error('Usage: node reelrender.js <props.json> <output-folder>'); process.exit(2); }
   let last = '';
-  renderReel(JSON.parse(fs.readFileSync(propsFile, 'utf8')), outFile, (p) => {
-    const line = p.total ? `${p.phase} ${p.done}/${p.total}` : p.phase;
+  renderReels(JSON.parse(fs.readFileSync(propsFile, 'utf8')), outDir, (p) => {
+    const line = `[${p.lang}] ` + (p.total ? `${p.phase} ${p.done}/${p.total}` : p.phase);
     if (line !== last && (!p.total || p.done % 150 === 0 || p.done === p.total)) { console.log(line); last = line; }
   })
-    .then((f) => console.log('Reel written: ' + f))
+    .then((files) => files.forEach((f) => console.log('Reel written: ' + path.join(outDir, f))))
     .catch((e) => { console.error(e.message); process.exit(1); });
 }

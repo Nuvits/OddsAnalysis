@@ -1,6 +1,6 @@
 # Odds Memory
 
-**Live site:** [nuvits.github.io/OddsAnalysis](https://nuvits.github.io/OddsAnalysis/) · **Instagram:** [@oddsmemory](https://www.instagram.com/oddsmemory/)
+**Live site:** [nuvits.github.io/OddsAnalysis](https://nuvits.github.io/OddsAnalysis/) · **Instagram:** [@oddsmemory](https://www.instagram.com/oddsmemory/) (English) · [@oranhafizasi](https://www.instagram.com/oranhafizasi/) (Turkish)
 
 Enter the **bwin** full-time odds (1 / X / 2) of an upcoming football match. The page finds past matches where bwin
 offered similar odds and shows how they ended: full-time and half-time result, HT/FT, both teams to score,
@@ -68,22 +68,49 @@ On other systems, run `node server.js --open` or `node server.js --update` inste
 | `ODDS_EMBED_MODE` | `file` (downloaded file) or `web` (self-updating site) |
 | `ODDS_REEL_REPO` | `owner/repo` for the online "Create reel" button (set by the Pages workflow) |
 | `ODDS_REELS_ENGINE` | where Remotion is installed (default `~/.odds-analysis/reels-engine`) |
+| `ODDS_MUSIC_DIR` | background music folder for the videos (default `./music`) |
 
 ## Instagram Reels videos
 
-A **Create Reels video** button next to the results turns the current analysis into a silent 30-second, 1080×1920 MP4.
-You add music in Instagram, where licensed tracks are available. The video has six scenes: hook, odds and number of
-matches, full-time result, goals, top HT/FT outcomes, and a closing scene (call to comment, follow reminder, disclaimer).
+A **Create Reels video** button next to the results turns the current analysis into two 30-second, 1080×1920 MP4s
+with background music: one in **English** for [@oddsmemory](https://www.instagram.com/oddsmemory/) and one in
+**Turkish** for [@oranhafizasi](https://www.instagram.com/oranhafizasi/). Each language has its own account name and
+logo; the numbers are the same. The video has six scenes: hook, odds and number of matches, full-time result, goals,
+top HT/FT outcomes, and a closing scene (call to comment, follow reminder, disclaimer).
 
-- **Local page:** the video is rendered on your computer and saved in `reels/out/`.
+- **Local page:** the videos are rendered on your computer and saved in `reels/out/` as
+  `<date>_<home>-<away>_<en|tr>.mp4`.
 - **Online page (GitHub Pages), e.g. from a phone:** the button opens a pre-filled GitHub issue titled
-  `Reel: Home – Away`. Submit it, and the [`Make reel`](.github/workflows/reel.yml) workflow renders the video on
-  GitHub, attaches it to a release and replies on the issue with a download link (2–4 minutes). Only issues opened
-  by the repository owner are processed; the request data is validated before rendering
+  `Reel: Home – Away`. Submit it, and the [`Make reel`](.github/workflows/reel.yml) workflow renders both videos on
+  GitHub, attaches them to a release and replies on the issue with the download links (4–6 minutes). Only issues
+  opened by the repository owner are processed; the request data is validated before rendering
   ([`reelrender.js`](reelrender.js)). You must be signed in to GitHub in the phone's browser.
 
+### Background music
+
+Put one or more tracks (MP3, M4A, AAC, WAV or OGG) into the `music/` folder. Each video gets one track, chosen by the
+match, so both language versions of a match share it. The track starts at its beginning, fades in over half a second
+and fades out over the last 1.5 seconds (volume: `MUSIC_VOLUME` in `reels/src/Reel.jsx`). Without tracks the videos
+are silent.
+
+`music/` is not part of the repository: the licences of free music libraries (e.g. Pixabay) allow using the tracks
+in videos but not redistributing the files themselves, which a public repository would do. For videos made on GitHub,
+keep the tracks in a **private** repository instead:
+
+1. Create a private repository named `odds-memory-music` under the same account, with the tracks at its top level.
+2. Create an SSH key pair without a passphrase (`ssh-keygen -t ed25519 -N "" -f music_deploy`).
+3. In `odds-memory-music`: *Settings → Deploy keys → Add deploy key*, paste `music_deploy.pub`, leave
+   *Allow write access* off.
+4. In this repository: *Settings → Secrets and variables → Actions → New repository secret*, name
+   `MUSIC_DEPLOY_KEY`, value: the content of the private key file `music_deploy`. Then delete the local key files.
+
+The key can only read that one repository and does not expire.
+
+Without them the workflow still works and the videos are silent.
+
 - The template is a [Remotion](https://www.remotion.dev) project in [`reels/`](reels/) (`src/Reel.jsx`).
-- Branding: name and Instagram handle in [`reels/brand.json`](reels/brand.json); the logo is [`reels/src/logo.jpg`](reels/src/logo.jpg)
+- Branding per language: name and Instagram handle in [`reels/brand.json`](reels/brand.json); the logos are
+  [`reels/src/logo-en.jpg`](reels/src/logo-en.jpg) and [`reels/src/logo-tr.jpg`](reels/src/logo-tr.jpg)
   (shown top-left in every scene and in the closing scene).
 - Remotion is installed automatically the first time a video is made. It goes into
   `%USERPROFILE%\.odds-analysis\reels-engine`, outside the project, because `node_modules` does not work on
@@ -91,6 +118,8 @@ matches, full-time result, goals, top HT/FT outcomes, and a closing scene (call 
 - Finished videos are saved in `reels/out/`.
 - To preview or tweak the template, run `npx remotion studio src/index.jsx` in the engine folder after copying
   `reels/src` there.
+- Command line: `node reelrender.js props.json reels/out`, where `props.json` holds one reel or a list of reels
+  (one per language).
 - Remotion is free for individuals and small companies; larger companies need a
   [company license](https://www.remotion.dev/license).
 
@@ -104,7 +133,8 @@ matches, full-time result, goals, top HT/FT outcomes, and a closing scene (call 
 | `reels/` | Remotion template for Instagram Reels videos and its branding settings |
 | `reelrender.js` | Validates reel data and renders the video (used by the local server and the workflow) |
 | `.github/workflows/pages.yml` | Scheduled update and GitHub Pages deployment |
-| `.github/workflows/reel.yml` | Renders a reel when the owner opens a `Reel:` issue |
+| `.github/workflows/reel.yml` | Renders the reels when the owner opens a `Reel:` issue |
+| `music/` | Background music for the videos (local only, not in the repository) |
 
 ## Disclaimer
 
