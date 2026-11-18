@@ -227,6 +227,8 @@ select:focus, input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 
 .htft td b { display: block; font-size: 13.5px; }
 .htft td small { color: var(--muted); }
 .htft td.top { outline: 2px solid var(--accent); }
+.site-foot { text-align: center; color: var(--muted); font-size: 12.5px; padding: 6px 16px 22px; }
+.site-foot a { color: var(--muted); }
 /* Outcomes above 75 % (HOT in app.js): red frame on the card, red value on the row / cell */
 .card.hot { border-color: var(--hot); box-shadow: 0 0 0 1px var(--hot); }
 .row.hot .p { color: var(--hot); }

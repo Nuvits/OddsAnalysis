@@ -58,6 +58,10 @@ jobs:
           ODDS_EMBED_MODE: web
           ODDS_REEL_REPO: ${{ github.repository }}   # enables the "Create reel" button (see reel.yml)
 
+      # Privacy policy and terms (linked from the page footer and required by Google/Meta for the publishing tool)
+      - name: Add the legal pages
+        run: cp site/* _site/
+
       - name: Save data for the next run
         uses: actions/cache/save@v4
         with:

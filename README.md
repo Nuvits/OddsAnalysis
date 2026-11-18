@@ -136,6 +136,7 @@ Without them the workflow still works and the videos are silent.
 | `server.js` | Local server, update job, storage, import/export and the single-file page builder |
 | `footballdata.js` | Downloads and parses the football-data.co.uk season and fixture files |
 | `public/` | The page (`index.html`, `app.js`, `style.css`), including both languages |
+| `site/` | Privacy policy and terms of service, published next to the page on GitHub Pages and linked from its footer |
 | `reels/` | Remotion template for Instagram Reels videos and its branding settings |
 | `reelrender.js` | Validates reel data and renders the video (used by the local server and the workflow) |
 | `.github/workflows/pages.yml` | Scheduled update and GitHub Pages deployment |

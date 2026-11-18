@@ -1,0 +1,17 @@
+/* Shared style of privacy.html and terms.html (same colours as the main page) */
+:root { --bg: #f4f5f2; --surface: #ffffff; --line: #e2e5de; --text: #1c211d; --muted: #69716a; --accent: #1f8a5b; color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #121512; --surface: #1a1e1b; --line: #2c322d; --text: #e6eae5; --muted: #97a098; --accent: #3fb47f; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+main { max-width: 760px; margin: 24px auto; padding: 24px 28px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+@media (max-width: 640px) { main { margin: 0; border: 0; border-radius: 0; padding: 20px 16px; } }
+h1 { margin: 4px 0 2px; font-size: 26px; }
+h2 { margin: 26px 0 6px; font-size: 17px; }
+a { color: var(--accent); }
+ul { padding-left: 20px; }
+li { margin: 4px 0; }
+.meta, .back, .foot { color: var(--muted); font-size: 13px; }
+.back a { text-decoration: none; }
+.foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--line); }
